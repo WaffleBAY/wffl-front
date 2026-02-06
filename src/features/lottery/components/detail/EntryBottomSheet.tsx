@@ -96,11 +96,11 @@ export function EntryBottomSheet({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">응모 금액</span>
                 <span className="text-lg font-bold text-foreground">
-                  {requiredValue ? `${formatEther(requiredValue)} ETH` : '계산 중...'}
+                  {requiredValue ? `${formatEther(requiredValue)} WLD` : '계산 중...'}
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                티켓 가격 + 보증금 0.005 ETH
+                티켓 가격 + 보증금 5 WLD
               </p>
             </div>
 

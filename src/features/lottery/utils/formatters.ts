@@ -2,10 +2,10 @@ import { LotteryStatus, MarketType } from '../types';
 import { formatEther } from 'viem';
 
 /**
- * Format ETH amount with Korean locale
+ * Format WLD amount with Korean locale
  * @param weiAmount - Amount in wei as string or bigint
  */
-export function formatETH(weiAmount: string | bigint): string {
+export function formatWLD(weiAmount: string | bigint): string {
   const ether = formatEther(BigInt(weiAmount));
   const num = parseFloat(ether);
   return num.toLocaleString('ko-KR', {
@@ -14,16 +14,6 @@ export function formatETH(weiAmount: string | bigint): string {
   });
 }
 
-/**
- * Format WLD amount with Korean locale (e.g., "1,000" for 1000)
- * @deprecated Use formatETH for contract values
- */
-export function formatWLD(amount: number): string {
-  return amount.toLocaleString('ko-KR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  });
-}
 
 /**
  * Format countdown display in Korean (e.g., "3일 12시간 남음")

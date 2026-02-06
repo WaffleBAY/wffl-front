@@ -7,7 +7,7 @@ import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { Lottery, MarketType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
-import { formatETH, getStatusBadgeVariant, getStatusLabel } from '../utils/formatters';
+import { formatWLD, getStatusBadgeVariant, getStatusLabel } from '../utils/formatters';
 
 interface LotteryCardProps {
   lottery: Lottery;
@@ -57,7 +57,7 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
 
           {/* Entry Price */}
           <p className="text-sm text-muted-foreground">
-            응모가격: <span className="font-medium text-foreground">{formatETH(lottery.ticketPrice)} ETH</span>
+            응모가격: <span className="font-medium text-foreground">{formatWLD(lottery.ticketPrice)} WLD</span>
           </p>
 
           {/* Progress Bar */}

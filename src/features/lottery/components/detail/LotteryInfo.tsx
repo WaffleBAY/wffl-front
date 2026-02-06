@@ -1,7 +1,7 @@
 'use client';
 
 import { Lottery, MarketType } from '../../types';
-import { formatETH } from '../../utils/formatters';
+import { formatWLD } from '../../utils/formatters';
 import { Badge } from '@/components/ui/badge';
 
 interface LotteryInfoProps {
@@ -31,7 +31,7 @@ export function LotteryInfo({ lottery }: LotteryInfoProps) {
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">응모 가격</span>
           <span className="text-lg font-semibold text-foreground">
-            {formatETH(lottery.ticketPrice)} ETH
+            {formatWLD(lottery.ticketPrice)} WLD
           </span>
         </div>
 
@@ -46,7 +46,7 @@ export function LotteryInfo({ lottery }: LotteryInfoProps) {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">판매자 보증금</span>
               <span className="text-base font-medium text-foreground">
-                {formatETH(lottery.sellerDeposit)} ETH
+                {formatWLD(lottery.sellerDeposit)} WLD
               </span>
             </div>
           </>
@@ -55,13 +55,13 @@ export function LotteryInfo({ lottery }: LotteryInfoProps) {
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">목표 금액</span>
               <span className="text-base font-medium text-foreground">
-                {formatETH(lottery.goalAmount)} ETH
+                {formatWLD(lottery.goalAmount)} WLD
               </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">현재 상금</span>
               <span className="text-base font-medium text-foreground">
-                {formatETH(lottery.prizePool)} ETH
+                {formatWLD(lottery.prizePool)} WLD
               </span>
             </div>
           </>
@@ -70,7 +70,7 @@ export function LotteryInfo({ lottery }: LotteryInfoProps) {
         <div className="border-t pt-2 mt-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>참가자 보증금</span>
-            <span>{formatETH(lottery.participantDeposit)} ETH</span>
+            <span>{formatWLD(lottery.participantDeposit)} WLD</span>
           </div>
         </div>
       </div>

@@ -39,7 +39,7 @@ export function FailedStatusUI({ lottery, onClaimRefund, claimRefundStep }: Fail
     : BigInt(0);
 
   const failureReason = lottery.marketType === MarketType.LOTTERY
-    ? `목표 금액 ${formatEther(BigInt(lottery.goalAmount))} ETH에 도달하지 못했습니다.`
+    ? `목표 금액 ${formatEther(BigInt(lottery.goalAmount))} WLD에 도달하지 못했습니다.`
     : '추첨 제한 시간이 초과되었습니다.';
 
   return (
@@ -56,12 +56,12 @@ export function FailedStatusUI({ lottery, onClaimRefund, claimRefundStep }: Fail
         <div className="bg-white rounded-lg p-3 text-sm">
           <div className="flex justify-between text-slate-600">
             <span>모금액</span>
-            <span>{formatEther(BigInt(lottery.prizePool))} ETH</span>
+            <span>{formatEther(BigInt(lottery.prizePool))} WLD</span>
           </div>
           {lottery.marketType === MarketType.LOTTERY && (
             <div className="flex justify-between text-slate-600 mt-1">
               <span>목표액</span>
-              <span>{formatEther(BigInt(lottery.goalAmount))} ETH</span>
+              <span>{formatEther(BigInt(lottery.goalAmount))} WLD</span>
             </div>
           )}
           <div className="flex justify-between text-slate-600 mt-1">
@@ -86,7 +86,7 @@ export function FailedStatusUI({ lottery, onClaimRefund, claimRefundStep }: Fail
           <div className="bg-white rounded-lg p-3">
             <div className="flex justify-between font-medium">
               <span>환불 금액</span>
-              <span>{formatEther(refundAmount)} ETH</span>
+              <span>{formatEther(refundAmount)} WLD</span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
               티켓 가격 + 보증금

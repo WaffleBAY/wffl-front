@@ -2,7 +2,7 @@
 
 import { Progress } from '@/components/ui/progress';
 import { Lottery, MarketType } from '../../types';
-import { formatETH } from '../../utils/formatters';
+import { formatWLD } from '../../utils/formatters';
 
 interface ParticipationProgressProps {
   lottery: Lottery;
@@ -38,7 +38,7 @@ export function ParticipationProgress({ lottery }: ParticipationProgressProps) {
           </span>
         ) : (
           <span className="text-muted-foreground">
-            {formatETH(lottery.prizePool)} / {formatETH(lottery.goalAmount)} ETH
+            {formatWLD(lottery.prizePool)} / {formatWLD(lottery.goalAmount)} WLD
           </span>
         )}
         <span className="font-medium text-foreground">

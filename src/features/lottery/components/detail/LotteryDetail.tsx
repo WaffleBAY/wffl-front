@@ -113,10 +113,10 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
   const getRefundAmountForDialog = () => {
     if (lottery.status === LotteryStatus.FAILED) {
       const totalRefund = BigInt(lottery.ticketPrice) + PARTICIPANT_DEPOSIT;
-      return formatEther(totalRefund) + ' ETH';
+      return formatEther(totalRefund) + ' WLD';
     }
     // COMPLETED status (deposit refund)
-    return formatEther(PARTICIPANT_DEPOSIT) + ' ETH';
+    return formatEther(PARTICIPANT_DEPOSIT) + ' WLD';
   };
 
   // Celebration state
@@ -212,7 +212,7 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
         isSuccess={settleStep === 'success'}
         isError={settleStep === 'error'}
         errorMessage={settleError}
-        refundAmount={formatEther(PARTICIPANT_DEPOSIT) + ' ETH'}
+        refundAmount={formatEther(PARTICIPANT_DEPOSIT) + ' WLD'}
         onClose={handleSettleResultClose}
         onRetry={handleSettleRetry}
       />

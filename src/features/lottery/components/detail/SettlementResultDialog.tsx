@@ -19,7 +19,7 @@ interface SettlementResultDialogProps {
   isSuccess: boolean;
   isError: boolean;
   errorMessage: string | null;
-  refundAmount?: string; // e.g., "0.005 ETH"
+  refundAmount?: string; // e.g., "5 WLD"
   onClose: () => void;
   onRetry: () => void;
 }

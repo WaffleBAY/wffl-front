@@ -18,9 +18,9 @@ export interface Lottery {
   // Market type
   marketType: MarketType;            // LOTTERY or RAFFLE
 
-  // Economic model (all in ETH/WLD)
+  // Economic model (all in WLD)
   ticketPrice: string;               // Entry price per ticket (bigint as string)
-  participantDeposit: string;        // Fixed 0.005 ETH per participant
+  participantDeposit: string;        // Fixed 5 WLD per participant
   sellerDeposit: string;             // 15% of goalAmount (both LOTTERY and RAFFLE)
   prizePool: string;                 // 95% of ticket sales accumulated
 
