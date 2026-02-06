@@ -241,11 +241,11 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         '0',                           // root (dummy - verification disabled)
         '0',                           // sellerNullifierHash (dummy)
         dummyProof,                    // sellerProof uint256[8] (dummy)
-        mTypeNum,
-        ticketPriceWei.toString(),
-        goalAmountWei.toString(),
-        data.winnerCount,
-        durationSeconds,
+        mTypeNum.toString(),           // mType (uint8)
+        ticketPriceWei.toString(),     // ticketPrice (uint256)
+        goalAmountWei.toString(),      // goalAmount (uint256)
+        data.winnerCount.toString(),   // preparedQuantity (uint256)
+        durationSeconds.toString(),    // duration (uint256)
       ];
       const txValue = '0x' + sellerDeposit.toString(16);
 
