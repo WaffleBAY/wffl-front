@@ -262,7 +262,7 @@ export class RealLotteryRepository implements ILotteryRepository {
     };
   }
 
-  async create(input: CreateMarketParams & { contractAddress?: string }): Promise<Lottery> {
+  async create(input: CreateMarketParams & { contractAddress?: string; endTime?: number }): Promise<Lottery> {
     const { data } = await apiClient.post<BackendLotteryDto>('/lotteries', {
       title: input.title,
       description: input.description,
@@ -273,7 +273,7 @@ export class RealLotteryRepository implements ILotteryRepository {
       goalAmount: input.goalAmount,   // Already in wei string
       preparedQuantity: input.preparedQuantity,
       duration: input.duration,
-      endTime: Math.floor(Date.now() / 1000) + input.duration, // Unix timestamp
+      endTime: input.endTime ?? (Math.floor(Date.now() / 1000) + input.duration), // Unix timestamp
       shippingRegions: input.shippingRegions,
       contractAddress: input.contractAddress, // Pass contract address to backend
     });

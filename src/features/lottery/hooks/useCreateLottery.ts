@@ -83,6 +83,8 @@ export function useCreateLottery(): UseCreateLotteryReturn {
   const pendingDataRef = useRef<{
     formData: LotteryCreateFormData;
     imageUrl: string;
+    durationSeconds: number;
+    endTime: number;
   } | null>(null);
 
   // Poll World Developer API directly (no server proxy needed)
@@ -165,16 +167,29 @@ export function useCreateLottery(): UseCreateLotteryReturn {
   const saveToBackend = useCallback(async (marketAddress: Address) => {
     if (!pendingDataRef.current) return;
 
-    const { formData, imageUrl } = pendingDataRef.current;
+    const { formData, imageUrl, durationSeconds, endTime } = pendingDataRef.current;
 
     try {
       setCurrentStep(STEPS.save);
       const repository = getLotteryRepository();
-      const createParams = convertFormToCreateParams(formData, imageUrl);
+
+      // Use pre-calculated duration/endTime from submit time (not recalculated)
+      const ticketPriceWei = BigInt(Math.floor(formData.entryPrice * 1e18)).toString();
+      const goalAmountWei = BigInt(Math.floor(formData.targetAmount * 1e18)).toString();
 
       const paramsWithContract = {
-        ...createParams,
+        marketType: formData.marketType,
+        ticketPrice: ticketPriceWei,
+        goalAmount: goalAmountWei,
+        preparedQuantity: formData.winnerCount,
+        duration: durationSeconds,
+        title: formData.title,
+        description: formData.description,
+        imageUrl,
+        prizeDescription: formData.description,
+        shippingRegions: formData.shippingRegions,
         contractAddress: marketAddress,
+        endTime,
       };
 
       const lottery = await repository.create(paramsWithContract);
@@ -182,13 +197,16 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       toast.success('마켓이 생성되었습니다!');
       router.push(`/lottery/${lottery.id}`);
     } catch (error) {
-      const errMsg = error instanceof Error
-        ? error.message
-        : (error as { response?: { data?: unknown } })?.response?.data
-          ? JSON.stringify((error as { response: { data: unknown } }).response.data)
+      // Extract actual validation error from axios response
+      const axiosData = (error as { response?: { data?: unknown } })?.response?.data;
+      const errMsg = axiosData
+        ? JSON.stringify(axiosData).slice(0, 300)
+        : error instanceof Error
+          ? error.message
           : String(error);
-      toast.error(`백엔드 저장 실패: ${errMsg.slice(0, 200)}`);
+      toast.error(`백엔드 저장 실패: ${errMsg}`);
       console.error('Backend save error:', error);
+      console.error('Backend response data:', axiosData);
     } finally {
       pendingDataRef.current = null;
       setIsSubmitting(false);
@@ -225,7 +243,9 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       const sellerDeposit = (goalAmountWei * BigInt(15)) / BigInt(100);
       const mTypeNum = data.marketType === MarketType.LOTTERY ? 0 : 1;
 
-      pendingDataRef.current = { formData: data, imageUrl };
+      // Store duration and endTime at submit time (not recalculated later)
+      const endTime = Math.floor(expiresAt / 1000);
+      pendingDataRef.current = { formData: data, imageUrl, durationSeconds, endTime };
 
       // Step 3: Send transaction with Permit2
       const contractAddr = getWaffleFactoryAddress(CHAIN_ID);
