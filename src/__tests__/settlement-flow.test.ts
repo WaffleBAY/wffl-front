@@ -193,27 +193,27 @@ describe('Settlement Flow - Refund Amount Calculation', () => {
   }
 
   it('full refund for FAILED lottery', () => {
-    const ticketPrice = BigInt('1000000000000000') // 0.001 ETH
-    const deposit = BigInt('5000000000000000') // 0.005 ETH
+    const ticketPrice = BigInt('1000000000000000000') // 1 WLD
+    const deposit = BigInt('5000000000000000000') // 5 WLD
 
     const refund = calculateRefundAmount(ticketPrice, deposit, LotteryStatus.FAILED)
-    expect(refund).toBe(BigInt('6000000000000000')) // 0.006 ETH
+    expect(refund).toBe(BigInt('6000000000000000000')) // 6 WLD
   })
 
   it('deposit only refund for COMPLETED', () => {
-    const ticketPrice = BigInt('1000000000000000')
-    const deposit = BigInt('5000000000000000')
+    const ticketPrice = BigInt('1000000000000000000') // 1 WLD
+    const deposit = BigInt('5000000000000000000') // 5 WLD
 
     const refund = calculateRefundAmount(ticketPrice, deposit, LotteryStatus.COMPLETED)
-    expect(refund).toBe(BigInt('5000000000000000')) // Only deposit
+    expect(refund).toBe(BigInt('5000000000000000000')) // Only deposit (5 WLD)
   })
 
   it('handles zero ticket price correctly', () => {
     const ticketPrice = BigInt(0)
-    const deposit = BigInt('5000000000000000')
+    const deposit = BigInt('5000000000000000000') // 5 WLD
 
     const refund = calculateRefundAmount(ticketPrice, deposit, LotteryStatus.FAILED)
-    expect(refund).toBe(BigInt('5000000000000000')) // Only deposit
+    expect(refund).toBe(BigInt('5000000000000000000')) // Only deposit (5 WLD)
   })
 })
 

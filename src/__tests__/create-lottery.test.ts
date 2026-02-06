@@ -13,7 +13,7 @@ describe('Create Lottery - Form to Contract Conversion', () => {
     const expiresAt = data.expiresAt.getTime()
     const durationSeconds = Math.max(0, Math.floor((expiresAt - now) / 1000))
 
-    // Convert ETH to wei
+    // Convert WLD to wei (18 decimals)
     const ticketPriceWei = BigInt(Math.floor(data.entryPrice * 1e18))
     const goalAmountWei = BigInt(Math.floor(data.targetAmount * 1e18))
 
@@ -48,30 +48,30 @@ describe('Create Lottery - Form to Contract Conversion', () => {
   }
 
   describe('Entry Price (ticketPrice) Conversion', () => {
-    it('converts 0.001 ETH to wei correctly', () => {
+    it('converts 0.001 WLD to wei correctly', () => {
       const result = convertFormToContractParams(baseFormData)
       expect(result.ticketPriceWei).toBe(BigInt('1000000000000000'))
     })
 
-    it('converts 0 ETH to 0 wei (free lottery)', () => {
+    it('converts 0 WLD to 0 wei (free lottery)', () => {
       const formData = { ...baseFormData, entryPrice: 0 }
       const result = convertFormToContractParams(formData)
       expect(result.ticketPriceWei).toBe(BigInt(0))
     })
 
-    it('converts 1 ETH to wei correctly', () => {
+    it('converts 1 WLD to wei correctly', () => {
       const formData = { ...baseFormData, entryPrice: 1 }
       const result = convertFormToContractParams(formData)
       expect(result.ticketPriceWei).toBe(BigInt('1000000000000000000'))
     })
 
-    it('converts 0.0001 ETH (small amount) correctly', () => {
+    it('converts 0.0001 WLD (small amount) correctly', () => {
       const formData = { ...baseFormData, entryPrice: 0.0001 }
       const result = convertFormToContractParams(formData)
       expect(result.ticketPriceWei).toBe(BigInt('100000000000000'))
     })
 
-    it('converts 100 ETH (max) correctly', () => {
+    it('converts 100 WLD (max) correctly', () => {
       const formData = { ...baseFormData, entryPrice: 100 }
       const result = convertFormToContractParams(formData)
       expect(result.ticketPriceWei).toBe(BigInt('100000000000000000000'))
@@ -86,18 +86,18 @@ describe('Create Lottery - Form to Contract Conversion', () => {
   })
 
   describe('Target Amount (goalAmount) Conversion', () => {
-    it('converts 0.01 ETH to wei correctly', () => {
+    it('converts 0.01 WLD to wei correctly', () => {
       const result = convertFormToContractParams(baseFormData)
       expect(result.goalAmountWei).toBe(BigInt('10000000000000000'))
     })
 
-    it('converts 0 ETH to 0 wei (no goal)', () => {
+    it('converts 0 WLD to 0 wei (no goal)', () => {
       const formData = { ...baseFormData, targetAmount: 0 }
       const result = convertFormToContractParams(formData)
       expect(result.goalAmountWei).toBe(BigInt(0))
     })
 
-    it('converts 10 ETH to wei correctly', () => {
+    it('converts 10 WLD to wei correctly', () => {
       const formData = { ...baseFormData, targetAmount: 10 }
       const result = convertFormToContractParams(formData)
       expect(result.goalAmountWei).toBe(BigInt('10000000000000000000'))
@@ -127,10 +127,10 @@ describe('Create Lottery - Form to Contract Conversion', () => {
       const formData = {
         ...baseFormData,
         marketType: MarketType.RAFFLE,
-        targetAmount: 1, // 1 ETH
+        targetAmount: 1, // 1 WLD
       }
       const result = convertFormToContractParams(formData)
-      // 15% of 1 ETH = 0.15 ETH = 150000000000000000 wei
+      // 15% of 1 WLD = 0.15 WLD = 150000000000000000 wei
       expect(result.sellerDeposit).toBe(BigInt('150000000000000000'))
     })
 
@@ -144,14 +144,14 @@ describe('Create Lottery - Form to Contract Conversion', () => {
       expect(result.sellerDeposit).toBe(BigInt(0))
     })
 
-    it('calculates 15% correctly for 0.1 ETH goal', () => {
+    it('calculates 15% correctly for 0.1 WLD goal', () => {
       const formData = {
         ...baseFormData,
         marketType: MarketType.RAFFLE,
-        targetAmount: 0.1, // 0.1 ETH
+        targetAmount: 0.1, // 0.1 WLD
       }
       const result = convertFormToContractParams(formData)
-      // 15% of 0.1 ETH = 0.015 ETH = 15000000000000000 wei
+      // 15% of 0.1 WLD = 0.015 WLD = 15000000000000000 wei
       expect(result.sellerDeposit).toBe(BigInt('15000000000000000'))
     })
   })
@@ -240,8 +240,8 @@ describe('Create Lottery - Edge Cases', () => {
     const ticketPriceWei = BigInt(Math.floor(formData.entryPrice * 1e18))
     const goalAmountWei = BigInt(Math.floor(formData.targetAmount * 1e18))
 
-    expect(ticketPriceWei).toBe(BigInt('100000000000000000000')) // 100 ETH
-    expect(goalAmountWei).toBe(BigInt('1000000000000000000000')) // 1000 ETH
+    expect(ticketPriceWei).toBe(BigInt('100000000000000000000')) // 100 WLD
+    expect(goalAmountWei).toBe(BigInt('1000000000000000000000')) // 1000 WLD
   })
 
   it('handles floating point precision limits', () => {
@@ -255,7 +255,7 @@ describe('Create Lottery - Edge Cases', () => {
     expect(smallWei).toBe(BigInt('100000000000000000000'))
 
     // Potentially lossy: very large values may have slight drift
-    // The actual application should never need values > 100 ETH per schema
+    // The actual application should never need values > 100 WLD per schema
     const largeEth = 9007
     const largeWei = BigInt(Math.floor(largeEth * 1e18))
     // Allow some precision loss for large values

@@ -9,7 +9,7 @@ import { PARTICIPANT_DEPOSIT } from '@/config/contracts'
  */
 
 describe('Entry Flow - Value Calculation', () => {
-  const PARTICIPANT_DEPOSIT_VALUE = BigInt('5000000000000000') // 0.005 ETH
+  const PARTICIPANT_DEPOSIT_VALUE = BigInt('5000000000000000000') // 5 WLD
 
   // Replicate the value calculation from useEnterMarket
   function calculateRequiredValue(ticketPrice: bigint): bigint {
@@ -17,21 +17,21 @@ describe('Entry Flow - Value Calculation', () => {
   }
 
   it('calculates required value with ticket price', () => {
-    const ticketPrice = BigInt('1000000000000000') // 0.001 ETH
+    const ticketPrice = BigInt('1000000000000000000') // 1 WLD
     const result = calculateRequiredValue(ticketPrice)
-    expect(result).toBe(BigInt('6000000000000000')) // 0.006 ETH
+    expect(result).toBe(BigInt('6000000000000000000')) // 6 WLD
   })
 
   it('calculates required value with zero ticket price (free)', () => {
     const ticketPrice = BigInt(0)
     const result = calculateRequiredValue(ticketPrice)
-    expect(result).toBe(BigInt('5000000000000000')) // Only deposit
+    expect(result).toBe(BigInt('5000000000000000000')) // Only deposit (5 WLD)
   })
 
   it('calculates required value with high ticket price', () => {
-    const ticketPrice = BigInt('1000000000000000000') // 1 ETH
+    const ticketPrice = BigInt('100000000000000000000') // 100 WLD
     const result = calculateRequiredValue(ticketPrice)
-    expect(result).toBe(BigInt('1005000000000000000')) // 1.005 ETH
+    expect(result).toBe(BigInt('105000000000000000000')) // 105 WLD
   })
 
   it('matches PARTICIPANT_DEPOSIT constant', () => {

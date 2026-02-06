@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createPublicClient, http, parseEventLogs, decodeEventLog } from 'viem';
 import { waffleFactoryAbi } from '@/contracts/generated';
 
-const worldChainSepoliaRpc = 'https://worldchain-sepolia.g.alchemy.com/public';
+const worldChainRpc = 'https://worldchain-mainnet.g.alchemy.com/public';
 
 const publicClient = createPublicClient({
   chain: {
-    id: 4801,
-    name: 'World Chain Sepolia',
+    id: 480,
+    name: 'World Chain',
     nativeCurrency: { decimals: 18, name: 'Ether', symbol: 'ETH' },
-    rpcUrls: { default: { http: [worldChainSepoliaRpc] } },
+    rpcUrls: { default: { http: [worldChainRpc] } },
   },
-  transport: http(worldChainSepoliaRpc),
+  transport: http(worldChainRpc),
 });
 
 /**

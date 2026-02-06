@@ -13,11 +13,11 @@ export function createMockLottery(overrides: Partial<Lottery> = {}): Lottery {
     imageUrl: 'https://example.com/image.jpg',
     prizeDescription: 'A wonderful prize',
     marketType: MarketType.LOTTERY,
-    ticketPrice: '1000000000000000', // 0.001 ETH
-    participantDeposit: '5000000000000000', // 0.005 ETH
+    ticketPrice: '1000000000000000000', // 1 WLD
+    participantDeposit: '5000000000000000000', // 5 WLD
     sellerDeposit: '0',
     prizePool: '0',
-    goalAmount: '10000000000000000', // 0.01 ETH
+    goalAmount: '10000000000000000000', // 10 WLD
     preparedQuantity: 1,
     endTime: Math.floor(Date.now() / 1000) + 86400, // 24 hours from now
     status: LotteryStatus.OPEN,
@@ -75,7 +75,7 @@ export function createMockLotteryWithStatus(status: LotteryStatus): Lottery {
  * Create mock raffle
  */
 export function createMockRaffle(overrides: Partial<Lottery> = {}): Lottery {
-  const goalAmount = '100000000000000000' // 0.1 ETH
+  const goalAmount = '100000000000000000000' // 100 WLD
   const sellerDeposit = (BigInt(goalAmount) * BigInt(15) / BigInt(100)).toString()
 
   return {
@@ -94,8 +94,8 @@ export function createMockRaffle(overrides: Partial<Lottery> = {}): Lottery {
 export function createMockCreateParams(overrides: Partial<CreateMarketParams> = {}): CreateMarketParams {
   return {
     marketType: MarketType.LOTTERY,
-    ticketPrice: '1000000000000000', // 0.001 ETH in wei
-    goalAmount: '10000000000000000', // 0.01 ETH in wei
+    ticketPrice: '1000000000000000000', // 1 WLD in wei
+    goalAmount: '10000000000000000000', // 10 WLD in wei
     preparedQuantity: 1,
     duration: 86400, // 24 hours
     title: 'Test Lottery',
@@ -120,8 +120,8 @@ export const testScenarios = {
 
   // High value lottery
   highValueLottery: createMockLottery({
-    ticketPrice: '1000000000000000000', // 1 ETH
-    goalAmount: '100000000000000000000', // 100 ETH
+    ticketPrice: '1000000000000000000', // 1 WLD
+    goalAmount: '100000000000000000000', // 100 WLD
   }),
 
   // Raffle with multiple winners
@@ -142,9 +142,9 @@ export const testScenarios = {
 
   // Lottery at goal
   atGoalLottery: createMockLottery({
-    ticketPrice: '1000000000000000', // 0.001 ETH
-    goalAmount: '10000000000000000', // 0.01 ETH
+    ticketPrice: '1000000000000000000', // 1 WLD
+    goalAmount: '10000000000000000000', // 10 WLD
     participantCount: 10,
-    prizePool: '9500000000000000', // 95% of 10 tickets
+    prizePool: '9500000000000000000', // 95% of 10 tickets (10 WLD * 95%)
   }),
 }

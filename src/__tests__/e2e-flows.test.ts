@@ -19,8 +19,8 @@ describe('E2E Flow: Complete Lottery Lifecycle', () => {
       // Form data
       const formData = {
         marketType: MarketType.LOTTERY,
-        entryPrice: 0.001, // 0.001 ETH
-        targetAmount: 0.01, // 0.01 ETH
+        entryPrice: 1, // 1 WLD
+        targetAmount: 10, // 10 WLD
         winnerCount: 1,
       }
 
@@ -30,9 +30,9 @@ describe('E2E Flow: Complete Lottery Lifecycle', () => {
       // Both LOTTERY and RAFFLE have 15% seller deposit
       const sellerDeposit = (goalAmountWei * BigInt(15)) / BigInt(100)
 
-      expect(ticketPriceWei).toBe(BigInt('1000000000000000'))
-      expect(goalAmountWei).toBe(BigInt('10000000000000000'))
-      expect(sellerDeposit).toBe(BigInt('1500000000000000')) // 15% of 0.01 ETH
+      expect(ticketPriceWei).toBe(BigInt('1000000000000000000'))
+      expect(goalAmountWei).toBe(BigInt('10000000000000000000'))
+      expect(sellerDeposit).toBe(BigInt('1500000000000000000')) // 15% of 10 WLD = 1.5 WLD
     })
 
     it('2. Lottery starts in CREATED status', () => {
@@ -53,10 +53,10 @@ describe('E2E Flow: Complete Lottery Lifecycle', () => {
       const canEnter = lottery.status === LotteryStatus.OPEN
       expect(canEnter).toBe(true)
 
-      // Value calculation
+      // Value calculation (ticket price from mock is 1 WLD + 5 WLD deposit)
       const ticketPrice = BigInt(lottery.ticketPrice)
       const requiredValue = ticketPrice + PARTICIPANT_DEPOSIT
-      expect(requiredValue).toBe(BigInt('6000000000000000')) // 0.006 ETH
+      expect(requiredValue).toBe(BigInt('6000000000000000000')) // 6 WLD
     })
 
     it('5. Entry closes and lottery moves to CLOSED', () => {
@@ -81,15 +81,15 @@ describe('E2E Flow: Complete Lottery Lifecycle', () => {
     it('1. Create raffle with 15% seller deposit', () => {
       const formData = {
         marketType: MarketType.RAFFLE,
-        entryPrice: 0.001,
-        targetAmount: 0.1, // 0.1 ETH
+        entryPrice: 1, // 1 WLD
+        targetAmount: 10, // 10 WLD
         winnerCount: 5,
       }
 
       const goalAmountWei = BigInt(Math.floor(formData.targetAmount * 1e18))
       const sellerDeposit = (goalAmountWei * BigInt(15)) / BigInt(100)
 
-      expect(sellerDeposit).toBe(BigInt('15000000000000000')) // 0.015 ETH (15% of 0.1)
+      expect(sellerDeposit).toBe(BigInt('1500000000000000000')) // 1.5 WLD (15% of 10 WLD)
     })
 
     it('2. Raffle has multiple winners based on preparedQuantity', () => {
@@ -136,7 +136,7 @@ describe('E2E Flow: Complete Lottery Lifecycle', () => {
       // Refund includes ticket + deposit
       const ticketPrice = BigInt(lottery.ticketPrice)
       const fullRefund = ticketPrice + PARTICIPANT_DEPOSIT
-      expect(fullRefund).toBe(BigInt('6000000000000000'))
+      expect(fullRefund).toBe(BigInt('6000000000000000000')) // 6 WLD (1 WLD ticket + 5 WLD deposit)
     })
   })
 
@@ -177,12 +177,12 @@ describe('E2E Flow: Complete Lottery Lifecycle', () => {
       const ticketPrice = BigInt(lottery.ticketPrice)
       const goalAmount = BigInt(lottery.goalAmount)
 
-      expect(ticketPrice).toBe(BigInt('1000000000000000000')) // 1 ETH
-      expect(goalAmount).toBe(BigInt('100000000000000000000')) // 100 ETH
+      expect(ticketPrice).toBe(BigInt('1000000000000000000')) // 1 WLD
+      expect(goalAmount).toBe(BigInt('100000000000000000000')) // 100 WLD
 
       // Entry value should not overflow
       const entryValue = ticketPrice + PARTICIPANT_DEPOSIT
-      expect(entryValue).toBe(BigInt('1005000000000000000')) // 1.005 ETH
+      expect(entryValue).toBe(BigInt('6000000000000000000')) // 6 WLD (1 WLD ticket + 5 WLD deposit)
     })
   })
 

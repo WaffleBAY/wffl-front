@@ -7,16 +7,16 @@ import { CHAIN_ID, PARTICIPANT_DEPOSIT, WORLD_FOUNDATION_FEE_BPS, OPS_WALLET_FEE
 
 describe('Contract Configuration', () => {
   describe('Chain ID', () => {
-    it('is World Chain Sepolia (4801)', () => {
-      expect(CHAIN_ID).toBe(4801)
+    it('is World Chain Mainnet (480)', () => {
+      expect(CHAIN_ID).toBe(480)
     })
   })
 
   describe('Constants', () => {
-    it('PARTICIPANT_DEPOSIT is 0.005 ETH', () => {
-      expect(PARTICIPANT_DEPOSIT).toBe(BigInt('5000000000000000'))
-      // Verify it equals 0.005 ETH
-      expect(PARTICIPANT_DEPOSIT / BigInt(1e15)).toBe(BigInt(5)) // 5 * 10^15 = 0.005 * 10^18
+    it('PARTICIPANT_DEPOSIT is 5 WLD', () => {
+      expect(PARTICIPANT_DEPOSIT).toBe(BigInt('5000000000000000000'))
+      // Verify it equals 5 WLD (5 * 10^18)
+      expect(PARTICIPANT_DEPOSIT / BigInt(1e18)).toBe(BigInt(5)) // 5 * 10^18 = 5 WLD
     })
 
     it('WORLD_FOUNDATION_FEE_BPS is 3%', () => {
@@ -44,9 +44,9 @@ describe('Contract Configuration', () => {
     }
 
     it('calculates 95% prize pool correctly', () => {
-      const ticketSales = BigInt('1000000000000000000') // 1 ETH
+      const ticketSales = BigInt('1000000000000000000') // 1 WLD
       const prizePool = calculatePrizePool(ticketSales)
-      expect(prizePool).toBe(BigInt('950000000000000000')) // 0.95 ETH
+      expect(prizePool).toBe(BigInt('950000000000000000')) // 0.95 WLD
     })
 
     it('handles zero sales', () => {
@@ -54,10 +54,10 @@ describe('Contract Configuration', () => {
       expect(prizePool).toBe(BigInt(0))
     })
 
-    it('calculates fees for 0.01 ETH', () => {
-      const ticketSales = BigInt('10000000000000000') // 0.01 ETH
+    it('calculates fees for 0.01 WLD', () => {
+      const ticketSales = BigInt('10000000000000000') // 0.01 WLD
       const prizePool = calculatePrizePool(ticketSales)
-      expect(prizePool).toBe(BigInt('9500000000000000')) // 0.0095 ETH
+      expect(prizePool).toBe(BigInt('9500000000000000')) // 0.0095 WLD
     })
   })
 
@@ -75,15 +75,15 @@ describe('Contract Configuration', () => {
     })
 
     it('returns 15% for RAFFLE type', () => {
-      const goalAmount = BigInt('1000000000000000000') // 1 ETH
+      const goalAmount = BigInt('1000000000000000000') // 1 WLD
       const deposit = calculateSellerDeposit(goalAmount, true)
-      expect(deposit).toBe(BigInt('150000000000000000')) // 0.15 ETH
+      expect(deposit).toBe(BigInt('150000000000000000')) // 0.15 WLD
     })
 
     it('handles small goal amounts', () => {
-      const goalAmount = BigInt('10000000000000000') // 0.01 ETH
+      const goalAmount = BigInt('10000000000000000') // 0.01 WLD
       const deposit = calculateSellerDeposit(goalAmount, true)
-      expect(deposit).toBe(BigInt('1500000000000000')) // 0.0015 ETH
+      expect(deposit).toBe(BigInt('1500000000000000')) // 0.0015 WLD
     })
 
     it('handles zero goal amount', () => {
@@ -124,41 +124,41 @@ describe('Address Validation', () => {
 })
 
 describe('Wei Conversion', () => {
-  function ethToWei(eth: number): bigint {
-    return BigInt(Math.floor(eth * 1e18))
+  function tokenToWei(amount: number): bigint {
+    return BigInt(Math.floor(amount * 1e18))
   }
 
-  function weiToEth(wei: bigint): number {
+  function weiToToken(wei: bigint): number {
     return Number(wei) / 1e18
   }
 
-  it('converts 1 ETH to wei', () => {
-    expect(ethToWei(1)).toBe(BigInt('1000000000000000000'))
+  it('converts 1 WLD to wei', () => {
+    expect(tokenToWei(1)).toBe(BigInt('1000000000000000000'))
   })
 
-  it('converts 0.001 ETH to wei', () => {
-    expect(ethToWei(0.001)).toBe(BigInt('1000000000000000'))
+  it('converts 0.001 WLD to wei', () => {
+    expect(tokenToWei(0.001)).toBe(BigInt('1000000000000000'))
   })
 
-  it('converts 0 ETH to wei', () => {
-    expect(ethToWei(0)).toBe(BigInt(0))
+  it('converts 0 WLD to wei', () => {
+    expect(tokenToWei(0)).toBe(BigInt(0))
   })
 
-  it('converts wei back to ETH', () => {
+  it('converts wei back to WLD', () => {
     const wei = BigInt('1000000000000000000')
-    expect(weiToEth(wei)).toBe(1)
+    expect(weiToToken(wei)).toBe(1)
   })
 
   it('handles precision for small amounts', () => {
-    const eth = 0.000001
-    const wei = ethToWei(eth)
+    const amount = 0.000001
+    const wei = tokenToWei(amount)
     expect(wei).toBe(BigInt('1000000000000'))
   })
 
   it('handles floating point edge cases', () => {
     // 0.1 + 0.2 !== 0.3 in floating point
-    const wei = ethToWei(0.1 + 0.2)
-    // Should be approximately 0.3 ETH
+    const wei = tokenToWei(0.1 + 0.2)
+    // Should be approximately 0.3 WLD
     expect(wei).toBeGreaterThan(BigInt('299999999999999000'))
     expect(wei).toBeLessThan(BigInt('300000000000001000'))
   })

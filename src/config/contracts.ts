@@ -6,12 +6,20 @@ if (!process.env.NEXT_PUBLIC_WAFFLE_FACTORY_ADDRESS) {
 }
 
 // Default chain ID for the application
-export const CHAIN_ID = 4801 as const // World Chain Sepolia (testnet)
+export const CHAIN_ID = 480 as const // World Chain Mainnet
+
+// WLD Token address
+export const WLD_TOKEN_ADDRESS = getAddress(
+  process.env.NEXT_PUBLIC_WLD_TOKEN_ADDRESS || '0x2cFc85d8E48F8EAB294be644d9E25C3030863003'
+)
+
+// Permit2 canonical address (same on all chains)
+export const PERMIT2_ADDRESS: Address = '0x000000000022D473030F116dDEE9F6B43aC78BA3'
 
 export const CONTRACT_ADDRESSES = {
   waffleFactory: {
-    // World Chain Sepolia (testnet)
-    4801: getAddress(process.env.NEXT_PUBLIC_WAFFLE_FACTORY_ADDRESS),
+    // World Chain Mainnet
+    480: getAddress(process.env.NEXT_PUBLIC_WAFFLE_FACTORY_ADDRESS),
   },
 } as const
 
@@ -43,6 +51,6 @@ export const waffleFactoryConfig = {
   // address is chain-dependent, use getWaffleFactoryAddress(chainId)
 } as const
 
-export const PARTICIPANT_DEPOSIT = BigInt('5000000000000000') // 0.005 ETH in wei
+export const PARTICIPANT_DEPOSIT = BigInt('5000000000000000000') // 5 WLD (5 * 1e18)
 export const WORLD_FOUNDATION_FEE_BPS = 300 // 3%
 export const OPS_WALLET_FEE_BPS = 200 // 2%

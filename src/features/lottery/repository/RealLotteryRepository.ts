@@ -8,7 +8,7 @@ import {
 import { Lottery, ParticipantInfo, CreateMarketParams, LotteryStatus, MarketType } from '../types';
 import { AxiosError } from 'axios';
 import { createPublicClient, http, parseEther, type Address } from 'viem';
-import { worldChainSepolia } from '@/config/wagmi';
+import { worldChain } from '@/config/wagmi';
 import { waffleMarketAbi } from '@/contracts/generated';
 
 // Helper to convert ETH to wei string
@@ -193,7 +193,7 @@ let publicClient: ReturnType<typeof createPublicClient> | null = null;
 function getPublicClient() {
   if (!publicClient) {
     publicClient = createPublicClient({
-      chain: worldChainSepolia,
+      chain: worldChain,
       transport: http(),
     });
   }

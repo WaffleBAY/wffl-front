@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { MiniKit } from '@worldcoin/minikit-js';
 import type { Address } from 'viem';
 import { waffleFactoryAbi } from '@/contracts/generated';
-import { getWaffleFactoryAddress, CHAIN_ID } from '@/config/contracts';
+import { getWaffleFactoryAddress, CHAIN_ID, WLD_TOKEN_ADDRESS } from '@/config/contracts';
 import { getLotteryRepository } from '../repository';
 import { uploadImage } from '@/lib/api/uploads';
 import { MarketType } from '../types';
@@ -53,7 +53,7 @@ function convertFormToCreateParams(data: LotteryCreateFormData, imageUrl: string
   const expiresAt = data.expiresAt.getTime();
   const durationSeconds = Math.max(0, Math.floor((expiresAt - now) / 1000));
 
-  // Convert ETH amounts to wei (string)
+  // Convert WLD amounts to wei (string) - WLD has 18 decimals
   const ticketPriceWei = BigInt(Math.floor(data.entryPrice * 1e18)).toString();
   const goalAmountWei = BigInt(Math.floor(data.targetAmount * 1e18)).toString();
 
@@ -227,16 +227,19 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       const ticketPriceWei = BigInt(Math.floor(data.entryPrice * 1e18));
       const goalAmountWei = BigInt(Math.floor(data.targetAmount * 1e18));
 
-      // Contract requires 15% deposit for ALL market types
+      // Contract requires 15% deposit for ALL market types (in WLD)
       const sellerDeposit = (goalAmountWei * BigInt(15)) / BigInt(100);
       const mTypeNum = data.marketType === MarketType.LOTTERY ? 0 : 1;
 
       pendingDataRef.current = { formData: data, imageUrl };
 
-      // Step 3: Send transaction
-      // World ID verification is commented out in contract, pass dummy values
+      // Step 3: Send transaction with Permit2
       const contractAddr = getWaffleFactoryAddress(CHAIN_ID);
       const dummyProof = ['0', '0', '0', '0', '0', '0', '0', '0'];
+
+      // Permit2 deadline: 1 hour from now
+      const permitDeadline = Math.floor(Date.now() / 1000) + 3600;
+
       const txArgs = [
         '0',                           // root (dummy - verification disabled)
         '0',                           // sellerNullifierHash (dummy)
@@ -246,8 +249,11 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         goalAmountWei.toString(),      // goalAmount (uint256)
         data.winnerCount.toString(),   // preparedQuantity (uint256)
         durationSeconds.toString(),    // duration (uint256)
+        sellerDeposit.toString(),      // _permitAmount (uint256)
+        '0',                           // _permitNonce (uint256) - Permit2 handles nonce
+        permitDeadline.toString(),     // _permitDeadline (uint256)
+        'PERMIT2_SIGNATURE_PLACEHOLDER_0', // _permitSignature (bytes) - MiniKit fills this
       ];
-      const txValue = '0x' + sellerDeposit.toString(16);
 
       setIsPending(true);
 
@@ -260,7 +266,17 @@ export function useCreateLottery(): UseCreateLotteryReturn {
               abi: waffleFactoryAbi as readonly object[],
               functionName: 'createMarket',
               args: txArgs,
-              value: txValue,
+            },
+          ],
+          permit2: [
+            {
+              permitted: {
+                token: WLD_TOKEN_ADDRESS,
+                amount: sellerDeposit.toString(),
+              },
+              spender: contractAddr,
+              nonce: '0',
+              deadline: permitDeadline.toString(),
             },
           ],
         });

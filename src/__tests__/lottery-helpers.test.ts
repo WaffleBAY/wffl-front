@@ -9,24 +9,24 @@ import { createMockLottery, createMockRaffle } from './mocks/lottery'
 
 describe('calculateEntryValue', () => {
   it('calculates entry value correctly', () => {
-    const ticketPrice = '1000000000000000' // 0.001 ETH
-    const participantDeposit = '5000000000000000' // 0.005 ETH
+    const ticketPrice = '1000000000000000000' // 1 WLD
+    const participantDeposit = '5000000000000000000' // 5 WLD
     const result = calculateEntryValue(ticketPrice, participantDeposit)
-    expect(result).toBe(BigInt('6000000000000000')) // 0.006 ETH
+    expect(result).toBe(BigInt('6000000000000000000')) // 6 WLD
   })
 
   it('handles zero ticket price (free lottery)', () => {
     const ticketPrice = '0'
-    const participantDeposit = '5000000000000000'
+    const participantDeposit = '5000000000000000000'
     const result = calculateEntryValue(ticketPrice, participantDeposit)
-    expect(result).toBe(BigInt('5000000000000000')) // Only deposit
+    expect(result).toBe(BigInt('5000000000000000000')) // Only deposit
   })
 
   it('handles zero deposit', () => {
-    const ticketPrice = '1000000000000000'
+    const ticketPrice = '1000000000000000000'
     const participantDeposit = '0'
     const result = calculateEntryValue(ticketPrice, participantDeposit)
-    expect(result).toBe(BigInt('1000000000000000')) // Only ticket
+    expect(result).toBe(BigInt('1000000000000000000')) // Only ticket
   })
 
   it('handles both zero (completely free)', () => {
@@ -37,10 +37,10 @@ describe('calculateEntryValue', () => {
   })
 
   it('handles large values', () => {
-    const ticketPrice = '1000000000000000000' // 1 ETH
-    const participantDeposit = '5000000000000000' // 0.005 ETH
+    const ticketPrice = '10000000000000000000' // 10 WLD
+    const participantDeposit = '5000000000000000000' // 5 WLD
     const result = calculateEntryValue(ticketPrice, participantDeposit)
-    expect(result).toBe(BigInt('1005000000000000000'))
+    expect(result).toBe(BigInt('15000000000000000000'))
   })
 })
 

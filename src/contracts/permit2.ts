@@ -1,0 +1,42 @@
+/**
+ * Minimal Permit2 ISignatureTransfer ABI for MiniKit integration.
+ */
+export const permit2Abi = [
+  {
+    type: 'function',
+    inputs: [
+      {
+        name: 'permit',
+        internalType: 'struct ISignatureTransfer.PermitTransferFrom',
+        type: 'tuple',
+        components: [
+          {
+            name: 'permitted',
+            internalType: 'struct ISignatureTransfer.TokenPermissions',
+            type: 'tuple',
+            components: [
+              { name: 'token', internalType: 'address', type: 'address' },
+              { name: 'amount', internalType: 'uint256', type: 'uint256' },
+            ],
+          },
+          { name: 'nonce', internalType: 'uint256', type: 'uint256' },
+          { name: 'deadline', internalType: 'uint256', type: 'uint256' },
+        ],
+      },
+      {
+        name: 'transferDetails',
+        internalType: 'struct ISignatureTransfer.SignatureTransferDetails',
+        type: 'tuple',
+        components: [
+          { name: 'to', internalType: 'address', type: 'address' },
+          { name: 'requestedAmount', internalType: 'uint256', type: 'uint256' },
+        ],
+      },
+      { name: 'owner', internalType: 'address', type: 'address' },
+      { name: 'signature', internalType: 'bytes', type: 'bytes' },
+    ],
+    name: 'permitTransferFrom',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+] as const
