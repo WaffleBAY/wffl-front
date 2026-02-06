@@ -1,14 +1,9 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
-// Server-side: use direct backend URL
-// Client-side: use proxy (for World App compatibility)
+// Use NEXT_PUBLIC_API_URL for both server and client
+// This env var is inlined at build time by Next.js
 const getBaseURL = () => {
-  if (typeof window === 'undefined') {
-    // Server-side rendering
-    return 'http://localhost:3001';
-  }
-  // Client-side
   return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
 };
 
