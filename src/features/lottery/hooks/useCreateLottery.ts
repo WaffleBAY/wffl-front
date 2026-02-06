@@ -159,37 +159,44 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       setIsPending(true);
       toast.info('트랜잭션 서명을 요청합니다...');
 
-      // Format transaction like HAVO reference:
-      // - args as raw values (MiniKit handles encoding)
-      // - value as hex string
-      const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-        transaction: [
-          {
-            address: getWaffleFactoryAddress(CHAIN_ID),
-            abi: waffleFactoryAbi as readonly object[],
-            functionName: 'createMarket',
-            args: [
-              mTypeNum,
-              ticketPriceWei,
-              goalAmountWei,
-              data.winnerCount,
-              durationSeconds,
-            ],
-            ...(sellerDeposit > BigInt(0)
-              ? { value: '0x' + sellerDeposit.toString(16) }
-              : {}),
-          },
-        ],
-      });
+      // Format transaction like HAVO reference
+      const contractAddr = getWaffleFactoryAddress(CHAIN_ID);
+      const txArgs = [
+        mTypeNum,
+        ticketPriceWei.toString(),
+        goalAmountWei.toString(),
+        data.winnerCount,
+        durationSeconds,
+      ];
+      const txValue = sellerDeposit > BigInt(0)
+        ? '0x' + sellerDeposit.toString(16)
+        : undefined;
+
+      toast.info(`Contract: ${contractAddr}, args: ${JSON.stringify(txArgs)}, value: ${txValue}`);
+
+      let finalPayload;
+      try {
+        const result = await MiniKit.commandsAsync.sendTransaction({
+          transaction: [
+            {
+              address: contractAddr,
+              abi: waffleFactoryAbi as readonly object[],
+              functionName: 'createMarket',
+              args: txArgs,
+              ...(txValue ? { value: txValue } : {}),
+            },
+          ],
+        });
+        finalPayload = result.finalPayload;
+      } catch (txError) {
+        throw new Error(`sendTransaction 예외: ${txError instanceof Error ? txError.message : JSON.stringify(txError)}`);
+      }
 
       setIsPending(false);
 
       if (finalPayload.status === 'error') {
-        const errorPayload = finalPayload as { error_code?: string };
-        if (errorPayload.error_code === 'user_rejected') {
-          throw new Error('트랜잭션이 취소되었습니다');
-        }
-        throw new Error('트랜잭션 전송에 실패했습니다');
+        const errorPayload = finalPayload as { error_code?: string; details?: string };
+        throw new Error(`TX 에러: ${errorPayload.error_code || 'unknown'} ${errorPayload.details || JSON.stringify(finalPayload)}`);
       }
 
       // Get transaction hash from response
