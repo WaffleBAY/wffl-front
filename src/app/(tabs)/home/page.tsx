@@ -2,6 +2,9 @@ import { getLotteryRepository } from '@/features/lottery/repository';
 import { LotteryList } from '@/features/lottery/components';
 import { RegionInitializer } from '@/features/region';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
   // Fetch all lotteries from repository (Real or Mock based on env)
   const repository = getLotteryRepository();

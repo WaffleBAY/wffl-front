@@ -3,6 +3,9 @@ import { Metadata } from 'next';
 import { getLotteryRepository } from '@/features/lottery/repository';
 import { LotteryDetail } from '@/features/lottery/components/detail';
 
+// Force dynamic rendering - don't pre-render during build
+export const dynamic = 'force-dynamic';
+
 interface LotteryDetailPageProps {
   params: Promise<{ id: string }>;
 }

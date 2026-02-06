@@ -1,15 +1,13 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { useWaitForTransactionReceipt } from 'wagmi';
-import { parseEventLogs, type Address } from 'viem';
-import {
-  useWriteWaffleFactoryCreateMarket,
-  waffleFactoryAbi,
-} from '@/contracts/generated';
+import { MiniKit } from '@worldcoin/minikit-js';
+import { parseEventLogs, type Address, type Hex, createPublicClient, http } from 'viem';
+import { waffleFactoryAbi } from '@/contracts/generated';
 import { getWaffleFactoryAddress, CHAIN_ID } from '@/config/contracts';
+import { worldChainSepolia } from '@/config/wagmi';
 import { getLotteryRepository } from '../repository';
 import { uploadImage } from '@/lib/api/uploads';
 import { MarketType } from '../types';
@@ -17,11 +15,17 @@ import type { LotteryCreateFormData } from '../schemas/lotteryCreateSchema';
 
 interface UseCreateLotteryReturn {
   isSubmitting: boolean;
-  isPending: boolean;        // contract write pending
+  isPending: boolean;        // waiting for MiniKit response
   isConfirming: boolean;     // waiting for tx receipt
   txHash: `0x${string}` | undefined;
   submit: (data: LotteryCreateFormData) => Promise<void>;
 }
+
+// Create a public client for reading receipts
+const publicClient = createPublicClient({
+  chain: worldChainSepolia,
+  transport: http(),
+});
 
 /**
  * Convert legacy form data to CreateMarketParams
@@ -34,7 +38,6 @@ function convertFormToCreateParams(data: LotteryCreateFormData, imageUrl: string
   const durationSeconds = Math.max(0, Math.floor((expiresAt - now) / 1000));
 
   // Convert ETH amounts to wei (string)
-  // entryPrice and targetAmount are in WLD/ETH, need to convert to wei
   const ticketPriceWei = BigInt(Math.floor(data.entryPrice * 1e18)).toString();
   const goalAmountWei = BigInt(Math.floor(data.targetAmount * 1e18)).toString();
 
@@ -47,7 +50,7 @@ function convertFormToCreateParams(data: LotteryCreateFormData, imageUrl: string
     title: data.title,
     description: data.description,
     imageUrl,
-    prizeDescription: data.description, // Use description as prize description for now
+    prizeDescription: data.description,
     shippingRegions: data.shippingRegions,
   };
 }
@@ -55,41 +58,9 @@ function convertFormToCreateParams(data: LotteryCreateFormData, imageUrl: string
 export function useCreateLottery(): UseCreateLotteryReturn {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Contract write hook with error state
-  const {
-    data: txHash,
-    isPending,
-    writeContract,
-    reset: resetWrite,
-    error: writeError,
-  } = useWriteWaffleFactoryCreateMarket();
-
-  // Transaction receipt waiting with error state
-  const {
-    data: receipt,
-    isLoading: isConfirming,
-    isSuccess: isTxSuccess,
-    isError: isTxError,
-  } = useWaitForTransactionReceipt({ hash: txHash });
-
-  // Extract market address from receipt
-  const marketAddress = useMemo(() => {
-    if (!receipt) return null;
-    try {
-      const logs = parseEventLogs({
-        abi: waffleFactoryAbi,
-        eventName: 'MarketCreated',
-        logs: receipt.logs,
-      });
-      if (logs.length > 0) {
-        return logs[0].args.marketAddress as Address;
-      }
-    } catch (e) {
-      console.error('Failed to parse MarketCreated event:', e);
-    }
-    return null;
-  }, [receipt]);
+  const [isPending, setIsPending] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
 
   // Ref to store pending form data for backend save
   const pendingDataRef = useRef<{
@@ -97,68 +68,71 @@ export function useCreateLottery(): UseCreateLotteryReturn {
     imageUrl: string;
   } | null>(null);
 
-  // Effect to handle write errors (wallet rejection, etc.)
-  useEffect(() => {
-    if (writeError) {
-      const errorMessage = writeError.message.includes('User rejected')
-        ? '트랜잭션이 취소되었습니다'
-        : '트랜잭션 전송에 실패했습니다';
-      toast.error(errorMessage);
-      pendingDataRef.current = null;
-      resetWrite();
-      setIsSubmitting(false);
-    }
-  }, [writeError, resetWrite]);
+  // Poll for transaction receipt and extract market address
+  const waitForReceipt = useCallback(async (hash: `0x${string}`): Promise<Address | null> => {
+    try {
+      const receipt = await publicClient.waitForTransactionReceipt({
+        hash,
+        confirmations: 1,
+      });
 
-  // Effect to handle transaction errors (on-chain failure)
-  useEffect(() => {
-    if (isTxError) {
-      toast.error('트랜잭션이 실패했습니다');
-      pendingDataRef.current = null;
-      resetWrite();
-      setIsSubmitting(false);
-    }
-  }, [isTxError, resetWrite]);
+      // Parse MarketCreated event to get market address
+      const logs = parseEventLogs({
+        abi: waffleFactoryAbi,
+        eventName: 'MarketCreated',
+        logs: receipt.logs,
+      });
 
-  // Effect to save to backend after tx success
-  useEffect(() => {
-    const saveToBackend = async () => {
-      if (!isTxSuccess || !marketAddress || !pendingDataRef.current) return;
-
-      const { formData, imageUrl } = pendingDataRef.current;
-
-      try {
-        const repository = getLotteryRepository();
-        const createParams = convertFormToCreateParams(formData, imageUrl);
-
-        // Add contract address to params
-        const paramsWithContract = {
-          ...createParams,
-          contractAddress: marketAddress,
-        };
-
-        const lottery = await repository.create(paramsWithContract);
-
-        toast.success('마켓이 생성되었습니다');
-        router.push(`/lottery/${lottery.id}`);
-      } catch (error) {
-        toast.error('백엔드 저장에 실패했습니다. 컨트랙트는 생성되었습니다.');
-        console.error('Backend save error:', error);
-      } finally {
-        pendingDataRef.current = null;
-        resetWrite();
-        setIsSubmitting(false);
+      if (logs.length > 0) {
+        return logs[0].args.marketAddress as Address;
       }
-    };
+      return null;
+    } catch (e) {
+      console.error('Failed to get receipt:', e);
+      return null;
+    }
+  }, []);
 
-    saveToBackend();
-  }, [isTxSuccess, marketAddress, router, resetWrite]);
+  // Save to backend after getting market address
+  const saveToBackend = useCallback(async (marketAddress: Address) => {
+    if (!pendingDataRef.current) return;
+
+    const { formData, imageUrl } = pendingDataRef.current;
+
+    try {
+      const repository = getLotteryRepository();
+      const createParams = convertFormToCreateParams(formData, imageUrl);
+
+      const paramsWithContract = {
+        ...createParams,
+        contractAddress: marketAddress,
+      };
+
+      const lottery = await repository.create(paramsWithContract);
+
+      toast.success('마켓이 생성되었습니다');
+      router.push(`/lottery/${lottery.id}`);
+    } catch (error) {
+      toast.error('백엔드 저장에 실패했습니다. 컨트랙트는 생성되었습니다.');
+      console.error('Backend save error:', error);
+    } finally {
+      pendingDataRef.current = null;
+      setIsSubmitting(false);
+      setIsConfirming(false);
+    }
+  }, [router]);
 
   const submit = async (data: LotteryCreateFormData) => {
     setIsSubmitting(true);
 
     try {
+      // Check MiniKit availability
+      if (!MiniKit.isInstalled()) {
+        throw new Error('World App에서 열어주세요');
+      }
+
       // Step 1: Upload image to R2 via backend
+      toast.info('이미지 업로드 중...');
       const imageUrl = await uploadImage(data.imageFile);
 
       // Step 2: Calculate contract params
@@ -181,22 +155,62 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       // Store pending data for backend save after tx confirms
       pendingDataRef.current = { formData: data, imageUrl };
 
-      // Step 3: Call contract
-      writeContract({
-        address: getWaffleFactoryAddress(CHAIN_ID),
-        args: [
-          mTypeNum,
-          ticketPriceWei,
-          goalAmountWei,
-          BigInt(data.winnerCount), // preparedQuantity
-          BigInt(durationSeconds),
+      // Step 3: Call contract via MiniKit sendTransaction
+      setIsPending(true);
+      toast.info('트랜잭션 서명을 요청합니다...');
+
+      const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+        transaction: [
+          {
+            address: getWaffleFactoryAddress(CHAIN_ID),
+            abi: waffleFactoryAbi,
+            functionName: 'createMarket',
+            args: [
+              mTypeNum,
+              ticketPriceWei.toString(),
+              goalAmountWei.toString(),
+              data.winnerCount.toString(),
+              durationSeconds.toString(),
+            ],
+            value: sellerDeposit.toString(),
+          },
         ],
-        value: sellerDeposit,
       });
+
+      setIsPending(false);
+
+      if (finalPayload.status === 'error') {
+        const errorPayload = finalPayload as { error_code?: string };
+        if (errorPayload.error_code === 'user_rejected') {
+          throw new Error('트랜잭션이 취소되었습니다');
+        }
+        throw new Error('트랜잭션 전송에 실패했습니다');
+      }
+
+      // Get transaction hash from response
+      const hash = (finalPayload as { transaction_id: string }).transaction_id as `0x${string}`;
+      setTxHash(hash);
+      setIsConfirming(true);
+      toast.info('트랜잭션 확인 중...');
+
+      // Wait for receipt and get market address
+      const marketAddress = await waitForReceipt(hash);
+
+      if (!marketAddress) {
+        throw new Error('마켓 주소를 가져올 수 없습니다');
+      }
+
+      // Save to backend
+      await saveToBackend(marketAddress);
+
     } catch (error) {
-      toast.error('마켓 생성 준비에 실패했습니다');
+      const message = error instanceof Error ? error.message : '마켓 생성에 실패했습니다';
+      toast.error(message);
       console.error('Create lottery error:', error);
+      pendingDataRef.current = null;
       setIsSubmitting(false);
+      setIsPending(false);
+      setIsConfirming(false);
     }
   };
 
