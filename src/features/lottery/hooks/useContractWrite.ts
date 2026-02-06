@@ -9,8 +9,8 @@ import { decodeAbiParameters, type Address } from 'viem'
 import { useWaitForTransactionReceipt } from 'wagmi'
 import type { BaseError } from 'wagmi'
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js'
-import { CHAIN_ID, PARTICIPANT_DEPOSIT, WLD_TOKEN_ADDRESS } from '@/config/contracts'
-import { waffleMarketAbi } from '@/contracts/generated'
+import { CHAIN_ID, PARTICIPANT_DEPOSIT, WLD_TOKEN_ADDRESS, getWaffleFactoryAddress } from '@/config/contracts'
+import { waffleFactoryAbi } from '@/contracts/generated'
 import {
   useWriteWaffleMarketSettle,
   useWriteWaffleMarketClaimRefund,
@@ -245,8 +245,10 @@ export function useEnterMarket(marketAddress: Address | undefined, ticketPriceWe
         }
       }
 
-      // Step 2: Build transaction with WorldID proof
+      // Step 2: Build transaction via Factory proxy (MiniKit only allows permitted addresses)
       setStep('signing')
+
+      const factoryAddress = getWaffleFactoryAddress(CHAIN_ID)
 
       const decoded = decodeAbiParameters(
         [{ type: 'uint256[8]' }],
@@ -257,8 +259,9 @@ export function useEnterMarket(marketAddress: Address | undefined, ticketPriceWe
       const permitDeadline = Math.floor(Date.now() / 1000) + 3600
       const permitNonce = Date.now()
 
+      // Factory.enterMarket(market, nullifierHash, proof, permitAmount, permitNonce, permitDeadline, permitSignature)
       const txArgs = [
-        verifyPayload.merkle_root,          // _root
+        marketAddress,                       // _market
         verifyPayload.nullifier_hash,       // _nullifierHash
         proofArray,                          // _proof uint256[8]
         requiredValue.toString(),            // _permitAmount
@@ -270,9 +273,9 @@ export function useEnterMarket(marketAddress: Address | undefined, ticketPriceWe
       const result = await MiniKit.commandsAsync.sendTransaction({
         transaction: [
           {
-            address: marketAddress,
-            abi: waffleMarketAbi as readonly object[],
-            functionName: 'enter',
+            address: factoryAddress,
+            abi: waffleFactoryAbi as readonly object[],
+            functionName: 'enterMarket',
             args: txArgs,
           },
         ],
@@ -282,7 +285,7 @@ export function useEnterMarket(marketAddress: Address | undefined, ticketPriceWe
               token: WLD_TOKEN_ADDRESS,
               amount: requiredValue.toString(),
             },
-            spender: marketAddress,
+            spender: factoryAddress,
             nonce: permitNonce.toString(),
             deadline: permitDeadline.toString(),
           },
