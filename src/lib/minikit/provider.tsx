@@ -5,7 +5,12 @@ import { ReactNode, useEffect } from 'react';
 
 export function MiniKitProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
-    MiniKit.install();
+    const appId = process.env.NEXT_PUBLIC_APP_ID;
+    if (appId) {
+      MiniKit.install(appId);
+    } else {
+      MiniKit.install();
+    }
   }, []);
 
   return <>{children}</>;
