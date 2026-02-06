@@ -7,12 +7,10 @@ import {
 } from './ILotteryRepository';
 import { Lottery, ParticipantInfo, CreateMarketParams, LotteryStatus, MarketType } from '../types';
 import { AxiosError } from 'axios';
-import { createPublicClient, http, parseEther, type Address } from 'viem';
+import { createPublicClient, http, type Address } from 'viem';
 import { worldChain } from '@/config/wagmi';
 import { waffleMarketAbi } from '@/contracts/generated';
-
-// Helper to convert ETH to wei string
-const toWei = (eth: number) => parseEther(eth.toString()).toString();
+import { PARTICIPANT_DEPOSIT } from '@/config/contracts';
 
 /**
  * Backend DTO matching backend/src/lottery/dto/lottery-response.dto.ts
@@ -23,12 +21,20 @@ interface BackendLotteryDto {
   description: string | null;
   prize: string;
   imageUrl: string | null;
-  ticketPrice: string; // Decimal as string
-  maxTickets: number;
-  soldTickets: number;
-  startDate: string;
-  endDate: string;
+  contractAddress: string | null;
+  marketType: string;
+  ticketPrice: string; // Wei string
+  goalAmount: string; // Wei string
+  sellerDeposit: string;
+  prizePool: string;
+  participantDeposit: string;
+  preparedQuantity: number;
+  endTime: string; // ISO date string
+  duration: number | null;
   status: string;
+  participantCount: number;
+  winners: string[];
+  shippingRegions: string[];
   region: string | null;
   creator: {
     id: string;
@@ -116,7 +122,7 @@ function mapEntryLotteryToFrontend(dto: BackendEntryLotteryDto): Lottery {
     prizeDescription: dto.prize,
     marketType: MarketType.LOTTERY,
     ticketPrice: '0', // Not provided in simplified DTO
-    participantDeposit: toWei(0.005),
+    participantDeposit: PARTICIPANT_DEPOSIT.toString(),
     sellerDeposit: '0',
     prizePool: '0', // Not provided in simplified DTO
     goalAmount: '0', // Not provided in simplified DTO
@@ -135,29 +141,19 @@ function mapEntryLotteryToFrontend(dto: BackendEntryLotteryDto): Lottery {
  * Map backend DTO to frontend Lottery type (contract-aligned)
  */
 function mapBackendToFrontend(dto: BackendLotteryDto): Lottery {
-  const ticketPriceEth = parseFloat(dto.ticketPrice);
-  const ticketPriceWei = toWei(ticketPriceEth);
-
-  // Calculate goal amount from backend data
-  const goalAmountWei = toWei(dto.maxTickets * ticketPriceEth);
-
-  // Calculate prize pool from sold tickets (95% goes to prize pool)
-  const soldAmountWei = BigInt(toWei(dto.soldTickets * ticketPriceEth));
-  const prizePoolWei = ((soldAmountWei * BigInt(95)) / BigInt(100)).toString();
-
   // Parse end time to Unix timestamp
-  const endTime = Math.floor(new Date(dto.endDate).getTime() / 1000);
+  const endTime = dto.endTime
+    ? Math.floor(new Date(dto.endTime).getTime() / 1000)
+    : 0;
 
   // Map backend status to LotteryStatus enum
   const statusMap: Record<string, LotteryStatus> = {
     CREATED: LotteryStatus.CREATED,
     OPEN: LotteryStatus.OPEN,
     CLOSED: LotteryStatus.CLOSED,
-
     REVEALED: LotteryStatus.REVEALED,
     COMPLETED: LotteryStatus.COMPLETED,
     FAILED: LotteryStatus.FAILED,
-    // Legacy status mappings
     PENDING: LotteryStatus.CREATED,
     ACTIVE: LotteryStatus.OPEN,
     ENDED: LotteryStatus.CLOSED,
@@ -165,24 +161,24 @@ function mapBackendToFrontend(dto: BackendLotteryDto): Lottery {
 
   return {
     id: dto.id,
-    contractAddress: dto.id, // Use ID as placeholder until backend provides contract address
+    contractAddress: dto.contractAddress ?? dto.id,
     title: dto.title,
     description: dto.description ?? '',
     imageUrl: dto.imageUrl ?? '',
     prizeDescription: dto.prize,
-    marketType: MarketType.LOTTERY, // Default, backend may not have this yet
-    ticketPrice: ticketPriceWei,
-    participantDeposit: toWei(0.005), // Fixed 0.005 ETH
-    sellerDeposit: '0', // LOTTERY type default
-    prizePool: prizePoolWei,
-    goalAmount: goalAmountWei,
-    preparedQuantity: 1, // Default for LOTTERY
+    marketType: dto.marketType === 'RAFFLE' ? MarketType.RAFFLE : MarketType.LOTTERY,
+    ticketPrice: dto.ticketPrice ?? '0',
+    participantDeposit: dto.participantDeposit ?? '0',
+    sellerDeposit: dto.sellerDeposit ?? '0',
+    prizePool: dto.prizePool ?? '0',
+    goalAmount: dto.goalAmount ?? '0',
+    preparedQuantity: dto.preparedQuantity ?? 1,
     endTime,
     status: statusMap[dto.status] ?? LotteryStatus.CREATED,
-    participantCount: dto.entriesCount,
+    participantCount: dto.participantCount ?? dto.entriesCount ?? 0,
     seller: dto.creator.id,
-    winners: [], // Backend doesn't expose this yet
-    shippingRegions: dto.region ? [dto.region] : ['WORLDWIDE'],
+    winners: dto.winners ?? [],
+    shippingRegions: dto.shippingRegions?.length ? dto.shippingRegions : (dto.region ? [dto.region] : ['WORLDWIDE']),
     createdAt: dto.createdAt,
   };
 }
