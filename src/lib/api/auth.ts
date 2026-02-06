@@ -16,7 +16,8 @@ const rawAxios = axios.create({
  * Public endpoint - no auth required
  */
 export async function getNonce(): Promise<string> {
-  const { data } = await apiClient.get<{ nonce: string }>('/auth/nonce');
+  // Use rawAxios to avoid auth interceptor (this is a public endpoint)
+  const { data } = await rawAxios.get<{ nonce: string }>('/auth/nonce');
   return data.nonce;
 }
 
@@ -28,7 +29,8 @@ export async function verifySiwe(
   payload: unknown,
   nonce: string
 ): Promise<{ accessToken: string; refreshToken: string }> {
-  const { data } = await apiClient.post<{
+  // Use rawAxios to avoid auth interceptor (this is a public endpoint)
+  const { data } = await rawAxios.post<{
     accessToken: string;
     refreshToken: string;
   }>('/auth/verify', { payload, nonce });
