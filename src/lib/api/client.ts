@@ -2,11 +2,13 @@ import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
 // Client-side: use /api/proxy (relative, goes through Next.js proxy route)
-// Server-side (SSR): use BACKEND_URL directly (relative URLs don't work on server)
+// Server-side (SSR): use BACKEND_URL or Vercel proxy with full URL
 const getBaseURL = () => {
   if (typeof window === 'undefined') {
-    // Server-side: use backend URL directly
-    return process.env.BACKEND_URL || 'http://localhost:3001';
+    // Server-side: prefer BACKEND_URL, fallback to Vercel proxy
+    if (process.env.BACKEND_URL) return process.env.BACKEND_URL;
+    if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}/api/proxy`;
+    return 'http://localhost:3001';
   }
   // Client-side: use proxy
   return process.env.NEXT_PUBLIC_API_URL || '/api/proxy';
