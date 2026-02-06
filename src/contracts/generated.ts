@@ -32,6 +32,13 @@ export const waffleFactoryAbi = [
   },
   {
     type: 'function',
+    inputs: [{ name: '_market', internalType: 'address', type: 'address' }],
+    name: 'closeDrawAndSettle',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
     inputs: [
       { name: '_root', internalType: 'uint256', type: 'uint256' },
       {
@@ -361,6 +368,13 @@ export const waffleMarketAbi = [
     type: 'function',
     inputs: [],
     name: 'claimRefund',
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
+    inputs: [],
+    name: 'closeDrawAndSettle',
     outputs: [],
     stateMutability: 'nonpayable',
   },
@@ -858,6 +872,15 @@ export const useWriteWaffleFactory = /*#__PURE__*/ createUseWriteContract({
 })
 
 /**
+ * Wraps __{@link useWriteContract}__ with `abi` set to __{@link waffleFactoryAbi}__ and `functionName` set to `"closeDrawAndSettle"`
+ */
+export const useWriteWaffleFactoryCloseDrawAndSettle =
+  /*#__PURE__*/ createUseWriteContract({
+    abi: waffleFactoryAbi,
+    functionName: 'closeDrawAndSettle',
+  })
+
+/**
  * Wraps __{@link useWriteContract}__ with `abi` set to __{@link waffleFactoryAbi}__ and `functionName` set to `"createMarket"`
  */
 export const useWriteWaffleFactoryCreateMarket =
@@ -917,6 +940,15 @@ export const useWriteWaffleFactoryUpdateOperator =
 export const useSimulateWaffleFactory = /*#__PURE__*/ createUseSimulateContract(
   { abi: waffleFactoryAbi },
 )
+
+/**
+ * Wraps __{@link useSimulateContract}__ with `abi` set to __{@link waffleFactoryAbi}__ and `functionName` set to `"closeDrawAndSettle"`
+ */
+export const useSimulateWaffleFactoryCloseDrawAndSettle =
+  /*#__PURE__*/ createUseSimulateContract({
+    abi: waffleFactoryAbi,
+    functionName: 'closeDrawAndSettle',
+  })
 
 /**
  * Wraps __{@link useSimulateContract}__ with `abi` set to __{@link waffleFactoryAbi}__ and `functionName` set to `"createMarket"`
@@ -1312,6 +1344,15 @@ export const useWriteWaffleMarketClaimRefund =
   })
 
 /**
+ * Wraps __{@link useWriteContract}__ with `abi` set to __{@link waffleMarketAbi}__ and `functionName` set to `"closeDrawAndSettle"`
+ */
+export const useWriteWaffleMarketCloseDrawAndSettle =
+  /*#__PURE__*/ createUseWriteContract({
+    abi: waffleMarketAbi,
+    functionName: 'closeDrawAndSettle',
+  })
+
+/**
  * Wraps __{@link useWriteContract}__ with `abi` set to __{@link waffleMarketAbi}__ and `functionName` set to `"closeEntries"`
  */
 export const useWriteWaffleMarketCloseEntries =
@@ -1395,6 +1436,15 @@ export const useSimulateWaffleMarketClaimRefund =
   /*#__PURE__*/ createUseSimulateContract({
     abi: waffleMarketAbi,
     functionName: 'claimRefund',
+  })
+
+/**
+ * Wraps __{@link useSimulateContract}__ with `abi` set to __{@link waffleMarketAbi}__ and `functionName` set to `"closeDrawAndSettle"`
+ */
+export const useSimulateWaffleMarketCloseDrawAndSettle =
+  /*#__PURE__*/ createUseSimulateContract({
+    abi: waffleMarketAbi,
+    functionName: 'closeDrawAndSettle',
   })
 
 /**

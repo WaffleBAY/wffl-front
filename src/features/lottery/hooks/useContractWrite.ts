@@ -355,6 +355,110 @@ export function useEnterMarket(marketAddress: Address | undefined, ticketPriceWe
 }
 
 /**
+ * Step tracking for draw transaction progress.
+ */
+export type DrawStep = 'idle' | 'signing' | 'confirming' | 'success' | 'error'
+
+/**
+ * Hook for closing, drawing winners, and settling a market in one step.
+ * Uses MiniKit sendTransaction via Factory proxy (closeDrawAndSettle).
+ * No Permit2 needed since no token transfer from user.
+ */
+export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
+  const [step, setStep] = useState<DrawStep>('idle')
+  const [hash, setHash] = useState<`0x${string}` | undefined>()
+  const [error, setError] = useState<string | null>(null)
+
+  const closeDrawAndSettle = useCallback(async () => {
+    if (!marketAddress) {
+      setError('컨트랙트 주소가 없습니다')
+      setStep('error')
+      return
+    }
+
+    setStep('signing')
+    setError(null)
+
+    try {
+      if (!MiniKit.isInstalled()) {
+        throw new Error('World App에서 열어주세요')
+      }
+
+      const factoryAddress = getWaffleFactoryAddress(CHAIN_ID)
+
+      const result = await MiniKit.commandsAsync.sendTransaction({
+        transaction: [
+          {
+            address: factoryAddress,
+            abi: waffleFactoryAbi as readonly object[],
+            functionName: 'closeDrawAndSettle',
+            args: [marketAddress],
+          },
+        ],
+      })
+
+      const { finalPayload: txPayload } = result
+
+      if (txPayload.status === 'error') {
+        throw new Error(`TX 에러: ${JSON.stringify(txPayload).slice(0, 200)}`)
+      }
+
+      // Poll for confirmation
+      setStep('confirming')
+
+      const transactionId = (txPayload as { transaction_id: string }).transaction_id
+      const appId = process.env.NEXT_PUBLIC_APP_ID
+
+      let realHash: string | null = null
+      for (let i = 0; i < 30; i++) {
+        try {
+          const url = `https://developer.worldcoin.org/api/v2/minikit/transaction/${transactionId}?app_id=${appId}&type=transaction`
+          const res = await fetch(url)
+          if (res.ok) {
+            const data = await res.json()
+            if (data.transactionStatus === 'failed') {
+              throw new Error('트랜잭션이 실패했습니다')
+            }
+            if (data.transactionHash) {
+              realHash = data.transactionHash
+              break
+            }
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message === '트랜잭션이 실패했습니다') throw e
+        }
+        await new Promise(r => setTimeout(r, 2000))
+      }
+
+      if (!realHash) {
+        throw new Error('트랜잭션 해시를 가져오지 못했습니다')
+      }
+
+      setHash(realHash as `0x${string}`)
+      setStep('success')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '추첨에 실패했습니다'
+      setError(message)
+      setStep('error')
+    }
+  }, [marketAddress])
+
+  const reset = useCallback(() => {
+    setStep('idle')
+    setHash(undefined)
+    setError(null)
+  }, [])
+
+  return {
+    closeDrawAndSettle,
+    reset,
+    step,
+    hash,
+    error,
+  }
+}
+
+/**
  * Hook for opening a market as seller.
  * Transitions market from CREATED to OPEN status.
  * Uses simulate -> write -> wait pattern with step tracking for UI feedback.

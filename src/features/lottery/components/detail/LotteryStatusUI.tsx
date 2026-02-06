@@ -2,7 +2,7 @@
 
 import { LotteryStatus } from '../../types/LotteryStatus';
 import type { Lottery } from '../../types/Lottery';
-import type { OpenMarketStep, SettlementStep } from '../../hooks/useContractWrite';
+import type { OpenMarketStep, SettlementStep, DrawStep } from '../../hooks/useContractWrite';
 import { CreatedStatusUI } from './CreatedStatusUI';
 import { OpenStatusUI } from './OpenStatusUI';
 import { ClosedStatusUI } from './ClosedStatusUI';
@@ -19,6 +19,14 @@ interface LotteryStatusUIProps {
   settleStep?: SettlementStep;
   onClaimRefund?: () => void;
   claimRefundStep?: SettlementStep;
+  onDraw?: () => void;
+  drawStep?: DrawStep;
+  isSeller?: boolean;
+  contractData?: {
+    participants?: readonly string[];
+    winners?: readonly string[];
+    status?: number;
+  };
 }
 
 /**
@@ -37,13 +45,17 @@ export function LotteryStatusUI({
   settleStep,
   onClaimRefund,
   claimRefundStep,
+  onDraw,
+  drawStep,
+  isSeller,
+  contractData,
 }: LotteryStatusUIProps) {
   const renderStatusUI = () => {
     switch (lottery.status) {
       case LotteryStatus.CREATED:
         return <CreatedStatusUI lottery={lottery} onOpenMarket={onOpenMarket} openMarketStep={openMarketStep} />;
       case LotteryStatus.OPEN:
-        return <OpenStatusUI lottery={lottery} hasEntered={hasEntered} />;
+        return <OpenStatusUI lottery={lottery} hasEntered={hasEntered} onDraw={onDraw} drawStep={drawStep} isSeller={isSeller} />;
       case LotteryStatus.CLOSED:
         return <ClosedStatusUI lottery={lottery} />;
       case LotteryStatus.REVEALED:
@@ -57,7 +69,7 @@ export function LotteryStatusUI({
           />
         );
       case LotteryStatus.COMPLETED:
-        return <CompletedStatusUI lottery={lottery} />;
+        return <CompletedStatusUI lottery={lottery} contractData={contractData} />;
       case LotteryStatus.FAILED:
         return <FailedStatusUI lottery={lottery} onClaimRefund={onClaimRefund} claimRefundStep={claimRefundStep} />;
       default:

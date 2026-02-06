@@ -10,8 +10,9 @@ import { useAuthStore } from '@/features/auth';
 import { useUserRole } from '../../hooks/useUserRole';
 import { useCelebrationStore } from '../../store/useCelebrationStore';
 import { formatEther } from 'viem';
-import { useOpenMarket, useSettle, useClaimRefund } from '../../hooks/useContractWrite';
+import { useOpenMarket, useSettle, useClaimRefund, useCloseDrawAndSettle } from '../../hooks/useContractWrite';
 import { PARTICIPANT_DEPOSIT } from '@/config/contracts';
+import { useLotteryContractData } from '../../hooks/useContractRead';
 import { LotteryHeader } from './LotteryHeader';
 import { LotteryInfo } from './LotteryInfo';
 import { ParticipationProgress } from './ParticipationProgress';
@@ -107,6 +108,31 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
     handleClaimRefund();
   };
 
+  // CloseDrawAndSettle hook for draw + settlement
+  const {
+    closeDrawAndSettle,
+    reset: resetDraw,
+    step: drawStep,
+    error: drawError,
+  } = useCloseDrawAndSettle(lottery.contractAddress as Address | undefined);
+
+  const handleDraw = () => {
+    closeDrawAndSettle();
+  };
+
+  const handleDrawResultClose = () => {
+    resetDraw();
+    if (drawStep === 'success') router.refresh();
+  };
+
+  const handleDrawRetry = () => {
+    resetDraw();
+    handleDraw();
+  };
+
+  // On-chain contract data (participants, winners, status)
+  const contractData = useLotteryContractData(lottery.contractAddress as Address | undefined);
+
   // Calculate refund amount for dialog based on status
   // FAILED: ticketPrice + participantDeposit (pool share)
   // COMPLETED: participantDeposit only
@@ -179,7 +205,7 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
         <LotteryInfo lottery={lottery} />
 
         {/* Participation progress bar */}
-        <ParticipationProgress lottery={lottery} />
+        <ParticipationProgress lottery={lottery} onChainParticipants={contractData.participants} />
 
         {/* Seller info with WorldID badge */}
         <SellerInfo sellerAddress={lottery.seller} isVerified={true} />
@@ -194,6 +220,10 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
           settleStep={settleStep}
           onClaimRefund={handleClaimRefund}
           claimRefundStep={claimRefundStep}
+          onDraw={handleDraw}
+          drawStep={drawStep}
+          isSeller={role === 'seller'}
+          contractData={contractData}
         />
       </div>
 
@@ -228,8 +258,19 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
         onRetry={handleClaimRefundRetry}
       />
 
-      {/* Entry CTA - only for OPEN status */}
-      {lottery.status === LotteryStatus.OPEN && (
+      {/* Draw result dialog */}
+      <SettlementResultDialog
+        action="settle"
+        isSuccess={drawStep === 'success'}
+        isError={drawStep === 'error'}
+        errorMessage={drawError}
+        refundAmount=""
+        onClose={handleDrawResultClose}
+        onRetry={handleDrawRetry}
+      />
+
+      {/* Entry CTA - only for OPEN status, not for seller */}
+      {lottery.status === LotteryStatus.OPEN && role !== 'seller' && (
         <EntryButton
           lottery={lottery}
           participantAddresses={participantAddresses}
