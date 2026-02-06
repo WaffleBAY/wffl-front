@@ -58,7 +58,7 @@ export function LotteryPreview({ formData, previewUrl }: LotteryPreviewProps) {
           <p className="text-sm text-muted-foreground">
             응모가격:{' '}
             <span className="font-medium text-foreground">
-              {formatWLD(entryPrice || 0)} WLD
+              {formatWLD(BigInt(entryPrice || 0))} WLD
             </span>
           </p>
 
