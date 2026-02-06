@@ -278,6 +278,8 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         ? '0x' + sellerDeposit.toString(16)
         : undefined;
 
+      toast.info(`args: ${JSON.stringify(txArgs).slice(0, 120)}`);
+
       let finalPayload;
       try {
         const result = await MiniKit.commandsAsync.sendTransaction({
@@ -293,14 +295,19 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         });
         finalPayload = result.finalPayload;
       } catch (txError) {
-        throw new Error(`sendTransaction 예외: ${txError instanceof Error ? txError.message : JSON.stringify(txError)}`);
+        const msg = txError instanceof Error
+          ? txError.message
+          : typeof txError === 'object'
+            ? JSON.stringify(txError, null, 0)
+            : String(txError);
+        throw new Error(`sendTx 예외: ${msg.slice(0, 200)}`);
       }
 
       setIsPending(false);
+      toast.info(`payload: ${JSON.stringify(finalPayload).slice(0, 150)}`);
 
       if (finalPayload.status === 'error') {
-        const errorPayload = finalPayload as { error_code?: string; details?: string };
-        throw new Error(`TX 에러: ${errorPayload.error_code || 'unknown'} ${errorPayload.details || JSON.stringify(finalPayload)}`);
+        throw new Error(`TX 에러: ${JSON.stringify(finalPayload).slice(0, 200)}`);
       }
 
       // Get transaction_id (relayer ID, not on-chain hash)
@@ -318,13 +325,13 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       await saveToBackend(marketAddress);
 
     } catch (error: unknown) {
-      let message = '마켓 생성에 실패했습니다';
+      let message: string;
       if (error instanceof Error) {
         message = error.message;
-      }
-      const axiosErr = error as { response?: { status?: number; data?: unknown } };
-      if (axiosErr?.response) {
-        message = `[${axiosErr.response.status}] ${JSON.stringify(axiosErr.response.data)}`;
+      } else if (typeof error === 'object' && error !== null) {
+        message = JSON.stringify(error).slice(0, 300);
+      } else {
+        message = String(error);
       }
       toast.error(message);
       console.error('Create lottery error:', error);
