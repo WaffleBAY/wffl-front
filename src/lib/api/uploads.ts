@@ -53,18 +53,25 @@ export async function uploadImage(file: File): Promise<string> {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
       const { refreshToken } = useAuthStore.getState();
       if (!refreshToken) {
-        throw new Error('로그인이 필요합니다');
+        useAuthStore.getState().logout();
+        throw new Error('로그인이 필요합니다. 지갑을 다시 연결해주세요.');
       }
 
-      // Refresh token
-      const { data: tokenData } = await axios.post(
-        `${baseUrl}/auth/refresh`,
-        {},
-        { headers: { Authorization: `Bearer ${refreshToken}` } }
-      );
+      try {
+        // Refresh token
+        const { data: tokenData } = await axios.post(
+          `${baseUrl}/auth/refresh`,
+          {},
+          { headers: { Authorization: `Bearer ${refreshToken}` } }
+        );
 
-      useAuthStore.getState().setTokens(tokenData.accessToken, tokenData.refreshToken);
-      token = tokenData.accessToken;
+        useAuthStore.getState().setTokens(tokenData.accessToken, tokenData.refreshToken);
+        token = tokenData.accessToken;
+      } catch {
+        // Refresh failed (403 = user deleted, token invalid, etc.)
+        useAuthStore.getState().logout();
+        throw new Error('세션이 만료되었습니다. 지갑을 다시 연결해주세요.');
+      }
 
       // Retry with new token - need fresh FormData
       const retryFormData = new FormData();
