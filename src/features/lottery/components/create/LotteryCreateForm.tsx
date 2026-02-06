@@ -26,13 +26,7 @@ interface LotteryCreateFormProps {
   onPreview?: (data: Partial<LotteryCreateFormData>, previewUrl: string | null) => void;
 }
 
-const ALL_STEP_IDS = ['upload', 'sign', 'confirm', 'save'] as const;
-const STEP_LABELS: Record<string, string> = {
-  upload: '이미지 업로드',
-  sign: '서명 요청',
-  confirm: '트랜잭션 확인',
-  save: '마켓 등록',
-};
+const ALL_STEP_IDS = ['upload', 'verify', 'sign', 'confirm', 'save'] as const;
 
 function ProgressOverlay({ step }: { step: NonNullable<CreateStep> }) {
   const currentIdx = ALL_STEP_IDS.indexOf(step.id);

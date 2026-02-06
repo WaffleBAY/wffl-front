@@ -31,6 +31,9 @@ export const waffleFactoryAbi = [
   {
     type: 'function',
     inputs: [
+      { name: 'root', internalType: 'uint256', type: 'uint256' },
+      { name: 'sellerNullifierHash', internalType: 'uint256', type: 'uint256' },
+      { name: 'sellerProof', internalType: 'uint256[8]', type: 'uint256[8]' },
       {
         name: '_mType',
         internalType: 'enum WaffleLib.MarketType',
