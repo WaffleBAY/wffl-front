@@ -8,6 +8,7 @@ import { getNonce, verifySiwe } from '@/lib/api/auth';
 interface UseAuthReturn {
   isLoading: boolean;
   error: string | null;
+  debugStep: string;
   isFullyAuthenticated: boolean;
   connectWallet: () => Promise<void>;
   verifyWorldId: () => Promise<void>;
@@ -17,6 +18,7 @@ interface UseAuthReturn {
 export function useAuth(): UseAuthReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [debugStep, setDebugStep] = useState<string>('');
 
   const { isWalletConnected, isWorldIdVerified, setWalletConnected, setTokens, setWorldIdVerified, logout: storeLogout } = useAuthStore();
 
@@ -25,29 +27,30 @@ export function useAuth(): UseAuthReturn {
   const connectWallet = useCallback(async () => {
     setIsLoading(true);
     setError(null);
+    setDebugStep('시작');
 
     try {
-      console.log('[Auth] Starting wallet connection...');
-      console.log('[Auth] API_URL:', process.env.NEXT_PUBLIC_API_URL);
+      setDebugStep('MiniKit 확인 중...');
 
       if (!MiniKit.isInstalled()) {
         throw new Error('World App에서 열어주세요');
       }
-      console.log('[Auth] MiniKit is installed');
+
+      setDebugStep('Nonce 요청 중...');
 
       // Step 1: Get nonce from backend (not client-side)
-      console.log('[Auth] Getting nonce...');
       const nonce = await getNonce();
-      console.log('[Auth] Got nonce:', nonce);
+
+      setDebugStep('MiniKit walletAuth 호출 중...');
 
       // Step 2: Request wallet auth from MiniKit with backend nonce
-      console.log('[Auth] Requesting wallet auth...');
       const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
         nonce,
         statement: 'World Lottery 앱에 로그인합니다',
         expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       });
-      console.log('[Auth] Wallet auth response:', finalPayload.status);
+
+      setDebugStep(`walletAuth 응답: ${finalPayload.status}`);
 
       if (finalPayload.status === 'error') {
         const errorCode = (finalPayload as { error_code?: string }).error_code;
@@ -126,6 +129,7 @@ export function useAuth(): UseAuthReturn {
   return {
     isLoading,
     error,
+    debugStep,
     isFullyAuthenticated,
     connectWallet,
     verifyWorldId,
