@@ -159,22 +159,29 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       setIsPending(true);
       toast.info('트랜잭션 서명을 요청합니다...');
 
-      const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-        transaction: [
-          {
-            address: getWaffleFactoryAddress(CHAIN_ID),
-            abi: waffleFactoryAbi,
-            functionName: 'createMarket',
-            args: [
-              mTypeNum,
-              ticketPriceWei.toString(),
-              goalAmountWei.toString(),
-              data.winnerCount.toString(),
-              durationSeconds.toString(),
-            ],
-            value: sellerDeposit.toString(),
-          },
+      // Format transaction like HAVO reference:
+      // - args as raw values (MiniKit handles encoding)
+      // - value as hex string
+      const tx: Record<string, unknown> = {
+        address: getWaffleFactoryAddress(CHAIN_ID),
+        abi: waffleFactoryAbi,
+        functionName: 'createMarket',
+        args: [
+          mTypeNum,
+          ticketPriceWei,
+          goalAmountWei,
+          data.winnerCount,
+          durationSeconds,
         ],
+      };
+
+      // Only include value if > 0 (HAVO pattern)
+      if (sellerDeposit > 0n) {
+        tx.value = '0x' + sellerDeposit.toString(16);
+      }
+
+      const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
+        transaction: [tx],
       });
 
       setIsPending(false);
