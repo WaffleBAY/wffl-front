@@ -36,10 +36,11 @@ interface UseCreateLotteryReturn {
 }
 
 interface TxStatusResponse {
-  status: 'pending' | 'mining' | 'success' | 'reverted' | 'failed';
+  status: 'pending' | 'mining' | 'success' | 'success_no_event' | 'reverted' | 'failed';
   txHash?: string;
   marketAddress?: string;
   error?: string;
+  logCount?: number;
 }
 
 /**
@@ -132,13 +133,13 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       return null;
     }
 
-    // Step 2: Get receipt via server API route (RPC calls server-side)
+    // Step 2: Get receipt via server API route (pass txHash directly to skip re-polling World API)
     for (let i = 0; i < 20; i++) {
       try {
         const res = await fetch('/api/transaction/status', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ transactionId }),
+          body: JSON.stringify({ transactionId, txHash: realHash }),
         });
         const text = await res.text();
 
@@ -154,6 +155,12 @@ export function useCreateLottery(): UseCreateLotteryReturn {
 
         if (data.status === 'reverted' || data.status === 'failed') {
           toast.error(`TX ${data.status}: ${JSON.stringify(data).slice(0, 100)}`);
+          return null;
+        }
+
+        // Transaction confirmed but no MarketCreated event found — stop polling
+        if (data.status === 'success_no_event') {
+          toast.error(`TX 성공했지만 MarketCreated 이벤트를 찾을 수 없습니다. logs=${data.logCount}`);
           return null;
         }
       } catch (e) {
