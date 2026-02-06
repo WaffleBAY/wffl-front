@@ -16,7 +16,6 @@ import {
   useWriteWaffleMarketClaimRefund,
   useSimulateWaffleMarketSettle,
   useSimulateWaffleMarketClaimRefund,
-  useReadWaffleMarketTicketPrice,
   useWriteWaffleMarketOpenMarket,
   useSimulateWaffleMarketOpenMarket,
 } from '@/contracts/generated'
@@ -32,14 +31,9 @@ export type OpenMarketStep = 'idle' | 'signing' | 'confirming' | 'success' | 'er
 export type SettlementStep = 'idle' | 'signing' | 'confirming' | 'success' | 'error'
 
 /**
- * WorldID proof data structure returned by MiniKit verify command.
+ * Step tracking for entry flow.
  */
-interface WorldIdProof {
-  merkle_root: string
-  nullifier_hash: string
-  proof: `0x${string}` // ABI-encoded bytes
-  verification_level: string
-}
+export type EntryStep = 'idle' | 'verifying' | 'signing' | 'confirming' | 'success' | 'error'
 
 /**
  * Hook for settling a market after winners are revealed.
@@ -188,51 +182,43 @@ export function useClaimRefund(marketAddress: Address | undefined) {
 }
 
 /**
- * Hook for entering a market with WorldID verification + Permit2 (via MiniKit).
- * Two-step flow: (1) verify WorldID via MiniKit, (2) MiniKit sendTransaction with Permit2.
+ * Hook for entering a market - single step: WorldID verify + Permit2 tx combined.
+ * ticketPriceWei is passed from lottery data (no contract read needed).
  */
-export function useEnterMarket(marketAddress: Address | undefined) {
-  const [isVerifying, setIsVerifying] = useState(false)
-  const [worldIdProof, setWorldIdProof] = useState<WorldIdProof | null>(null)
-  const [verifyError, setVerifyError] = useState<string | null>(null)
-  const [isPending, setIsPending] = useState(false)
-  const [isConfirming, setIsConfirming] = useState(false)
-  const [isConfirmed, setIsConfirmed] = useState(false)
+export function useEnterMarket(marketAddress: Address | undefined, ticketPriceWei: string) {
+  const [step, setStep] = useState<EntryStep>('idle')
   const [hash, setHash] = useState<`0x${string}` | undefined>()
-  const [enterError, setEnterError] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  // Read ticket price for value calculation
-  const { data: ticketPrice } = useReadWaffleMarketTicketPrice({
-    address: marketAddress,
-    chainId: CHAIN_ID,
-    query: { enabled: !!marketAddress },
-  })
-
-  // Calculate required value: ticketPrice + PARTICIPANT_DEPOSIT (in WLD)
+  // Calculate required value from passed ticketPrice
   const requiredValue = useMemo(() => {
-    if (!ticketPrice) return undefined
-    return ticketPrice + PARTICIPANT_DEPOSIT
-  }, [ticketPrice])
+    if (!ticketPriceWei || ticketPriceWei === '0') return undefined
+    return BigInt(ticketPriceWei) + PARTICIPANT_DEPOSIT
+  }, [ticketPriceWei])
 
   /**
-   * Step 1: Verify WorldID via MiniKit.
+   * Single-step entry: WorldID verification → sendTransaction in one go.
    */
-  const verifyWorldId = async (lotteryId: string) => {
-    setIsVerifying(true)
-    setVerifyError(null)
+  const enterMarket = useCallback(async (lotteryId: string) => {
+    if (!marketAddress || !requiredValue) return
+
+    setStep('verifying')
+    setError(null)
+
     try {
       if (!MiniKit.isInstalled()) {
         throw new Error('World App에서 열어주세요')
       }
 
-      const { finalPayload } = await MiniKit.commandsAsync.verify({
+      // Step 1: WorldID verification
+      const { finalPayload: verifyPayload } = await MiniKit.commandsAsync.verify({
         action: 'lottery-entry',
         signal: lotteryId,
         verification_level: VerificationLevel.Orb,
       })
 
-      if (finalPayload.status === 'error') {
-        const errorCode = (finalPayload as { error_code?: string }).error_code
+      if (verifyPayload.status === 'error') {
+        const errorCode = (verifyPayload as { error_code?: string }).error_code
         switch (errorCode) {
           case 'user_rejected':
             throw new Error('인증이 취소되었습니다')
@@ -247,48 +233,26 @@ export function useEnterMarket(marketAddress: Address | undefined) {
         }
       }
 
-      setWorldIdProof({
-        merkle_root: finalPayload.merkle_root,
-        nullifier_hash: finalPayload.nullifier_hash,
-        proof: finalPayload.proof as `0x${string}`,
-        verification_level: finalPayload.verification_level,
-      })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'WorldID 인증에 실패했습니다'
-      setVerifyError(message)
-      throw err
-    } finally {
-      setIsVerifying(false)
-    }
-  }
+      // Step 2: Build transaction with WorldID proof
+      setStep('signing')
 
-  /**
-   * Step 2: Enter the market via MiniKit sendTransaction with Permit2.
-   */
-  const enter = useCallback(async () => {
-    if (!worldIdProof || !marketAddress || !requiredValue) return
-
-    setIsPending(true)
-    setEnterError(null)
-
-    try {
-      // Decode proof uint256[8] from ABI-encoded bytes
       const decoded = decodeAbiParameters(
         [{ type: 'uint256[8]' }],
-        worldIdProof.proof
+        verifyPayload.proof as `0x${string}`
       )
       const proofArray = (decoded[0] as readonly bigint[]).map(v => v.toString())
 
       const permitDeadline = Math.floor(Date.now() / 1000) + 3600
+      const permitNonce = Date.now()
 
       const txArgs = [
-        worldIdProof.merkle_root,          // _root
-        worldIdProof.nullifier_hash,       // _nullifierHash
-        proofArray,                         // _proof uint256[8]
-        requiredValue.toString(),           // _permitAmount
-        '0',                               // _permitNonce
-        permitDeadline.toString(),          // _permitDeadline
-        'PERMIT2_SIGNATURE_PLACEHOLDER_0', // _permitSignature
+        verifyPayload.merkle_root,          // _root
+        verifyPayload.nullifier_hash,       // _nullifierHash
+        proofArray,                          // _proof uint256[8]
+        requiredValue.toString(),            // _permitAmount
+        permitNonce.toString(),              // _permitNonce
+        permitDeadline.toString(),           // _permitDeadline
+        'PERMIT2_SIGNATURE_PLACEHOLDER_0',   // _permitSignature
       ]
 
       const result = await MiniKit.commandsAsync.sendTransaction({
@@ -307,23 +271,22 @@ export function useEnterMarket(marketAddress: Address | undefined) {
               amount: requiredValue.toString(),
             },
             spender: marketAddress,
-            nonce: '0',
+            nonce: permitNonce.toString(),
             deadline: permitDeadline.toString(),
           },
         ],
       })
 
-      const { finalPayload } = result
+      const { finalPayload: txPayload } = result
 
-      if (finalPayload.status === 'error') {
-        throw new Error(`TX 에러: ${JSON.stringify(finalPayload).slice(0, 200)}`)
+      if (txPayload.status === 'error') {
+        throw new Error(`TX 에러: ${JSON.stringify(txPayload).slice(0, 200)}`)
       }
 
-      setIsPending(false)
-      setIsConfirming(true)
+      // Step 3: Poll for confirmation
+      setStep('confirming')
 
-      // Poll for real tx hash
-      const transactionId = (finalPayload as { transaction_id: string }).transaction_id
+      const transactionId = (txPayload as { transaction_id: string }).transaction_id
       const appId = process.env.NEXT_PUBLIC_APP_ID
 
       let realHash: string | null = null
@@ -352,46 +315,26 @@ export function useEnterMarket(marketAddress: Address | undefined) {
       }
 
       setHash(realHash as `0x${string}`)
-      setIsConfirmed(true)
-      setIsConfirming(false)
+      setStep('success')
     } catch (err) {
       const message = err instanceof Error ? err.message : '응모에 실패했습니다'
-      setEnterError(message)
-      setIsPending(false)
-      setIsConfirming(false)
+      setError(message)
+      setStep('error')
     }
-  }, [worldIdProof, marketAddress, requiredValue])
+  }, [marketAddress, requiredValue])
 
-  const error = verifyError || enterError
-
-  const reset = () => {
-    setWorldIdProof(null)
-    setVerifyError(null)
-    setEnterError(null)
-    setIsPending(false)
-    setIsConfirming(false)
-    setIsConfirmed(false)
+  const reset = useCallback(() => {
+    setStep('idle')
     setHash(undefined)
-  }
+    setError(null)
+  }, [])
 
   return {
-    // Actions
-    verifyWorldId,
-    enter,
+    enterMarket,
     reset,
-    // WorldID verification state
-    isVerifying,
-    worldIdProof,
-    // Contract write state
-    isPending,
-    isConfirming,
-    isConfirmed,
+    step,
     hash,
-    // Computed values
-    canEnter: !!worldIdProof && !!requiredValue,
     requiredValue,
-    ticketPrice,
-    // Error state
     error,
   }
 }

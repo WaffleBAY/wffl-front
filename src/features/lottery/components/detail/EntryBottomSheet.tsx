@@ -5,22 +5,16 @@ import { Sheet } from 'react-modal-sheet';
 import { formatEther } from 'viem';
 import { Button } from '@/components/ui/button';
 import { Lottery } from '../../types';
+import type { EntryStep } from '../../hooks/useContractWrite';
 
 interface EntryBottomSheetProps {
   isOpen: boolean;
   onClose: () => void;
   lottery: Lottery;
-
-  // Two-step flow
-  verifyWorldId: () => Promise<void>;
   enter: () => void;
-  isVerifying: boolean;
-  isPending: boolean;
-  isConfirming: boolean;
-  isConfirmed: boolean;
+  step: EntryStep;
   requiredValue: bigint | undefined;
   error: string | null;
-  canSubmitTx: boolean;
 }
 
 const LoadingSpinner = () => (
@@ -45,29 +39,32 @@ const LoadingSpinner = () => (
   </svg>
 );
 
+const STEP_LABELS: Record<string, string> = {
+  verifying: 'WorldID 인증 중...',
+  signing: '서명 중...',
+  confirming: '트랜잭션 처리 중...',
+};
+
 export function EntryBottomSheet({
   isOpen,
   onClose,
   lottery,
-  verifyWorldId,
   enter,
-  isVerifying,
-  isPending,
-  isConfirming,
-  isConfirmed,
+  step,
   requiredValue,
   error,
-  canSubmitTx,
 }: EntryBottomSheetProps) {
-  // Close sheet on successful confirmation
+  // Close sheet on success
   useEffect(() => {
-    if (isConfirmed) {
+    if (step === 'success') {
       onClose();
     }
-  }, [isConfirmed, onClose]);
+  }, [step, onClose]);
+
+  const isProcessing = step === 'verifying' || step === 'signing' || step === 'confirming';
 
   const handleBackdropTap = () => {
-    if (!isVerifying && !isPending && !isConfirming) {
+    if (!isProcessing) {
       onClose();
     }
   };
@@ -96,11 +93,11 @@ export function EntryBottomSheet({
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">응모 금액</span>
                 <span className="text-lg font-bold text-foreground">
-                  {requiredValue ? `${formatEther(requiredValue)} WLD` : '계산 중...'}
+                  {requiredValue ? `${formatEther(requiredValue)} WLD` : `${formatEther(BigInt(lottery.ticketPrice))} WLD`}
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                티켓 가격 + 보증금 (응모금액의 5%)
+                티켓 가격 + 보증금 (5 WLD)
               </p>
             </div>
 
@@ -109,61 +106,27 @@ export function EntryBottomSheet({
               <p className="mb-4 text-sm text-destructive">{error}</p>
             )}
 
-            {/* Two-step buttons */}
-            {!canSubmitTx ? (
-              <>
-                <p className="mb-4 text-sm text-muted-foreground">
-                  WorldID로 본인 인증이 필요합니다.
-                </p>
-                <Button
-                  onClick={async () => {
-                    try {
-                      await verifyWorldId();
-                    } catch {
-                      // Error already toasted in hook
-                    }
-                  }}
-                  disabled={isVerifying}
-                  className="w-full py-6 text-base font-semibold"
-                  size="lg"
-                >
-                  {isVerifying ? (
-                    <span className="flex items-center gap-2">
-                      <LoadingSpinner />
-                      인증 중...
-                    </span>
-                  ) : (
-                    'WorldID 인증하기'
-                  )}
-                </Button>
-              </>
-            ) : (
-              <>
-                <p className="mb-4 text-sm text-destructive">
-                  응모하면 취소할 수 없습니다.
-                </p>
-                <Button
-                  onClick={enter}
-                  disabled={isPending || isConfirming}
-                  className="w-full py-6 text-base font-semibold"
-                  size="lg"
-                >
-                  {isPending ? (
-                    <span className="flex items-center gap-2">
-                      <LoadingSpinner />
-                      서명 중...
-                    </span>
-                  ) : isConfirming ? (
-                    <span className="flex items-center gap-2">
-                      <LoadingSpinner />
-                      처리 중...
-                    </span>
-                  ) : (
-                    '응모하기'
-                  )}
-                </Button>
-              </>
-            )}
+            {/* Warning */}
+            <p className="mb-4 text-sm text-destructive">
+              응모하면 취소할 수 없습니다.
+            </p>
+
+            {/* Single entry button */}
+            <Button
+              onClick={enter}
+              disabled={isProcessing}
+              className="w-full py-6 text-base font-semibold"
+              size="lg"
+            >
+              {isProcessing ? (
+                <span className="flex items-center gap-2">
+                  <LoadingSpinner />
+                  {STEP_LABELS[step] || '처리 중...'}
+                </span>
+              ) : (
+                '응모하기'
+              )}
+            </Button>
           </div>
         </Sheet.Content>
       </Sheet.Container>

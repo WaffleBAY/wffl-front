@@ -5,26 +5,15 @@ import { isAddressEqual, type Address } from 'viem';
 import { useAuthStore } from '@/features/auth';
 import { toast } from 'sonner';
 import { LotteryStatus } from '../types';
-import { useEnterMarket } from './useContractWrite';
+import { useEnterMarket, type EntryStep } from './useContractWrite';
 
 interface UseEntryReturn {
-  // Existing
-  isLoading: boolean;
   hasEntered: boolean;
   canEnter: boolean;
-  needsVerification: boolean;
-  triggerVerification: () => void;
-
-  // Two-step flow
-  verifyWorldId: () => Promise<void>;
   enter: () => void;
-  isVerifying: boolean;
-  isPending: boolean;
-  isConfirming: boolean;
-  isConfirmed: boolean;
+  step: EntryStep;
   requiredValue: bigint | undefined;
   error: string | null;
-  canSubmitTx: boolean;
   reset: () => void;
 }
 
@@ -32,86 +21,59 @@ export function useEntry(
   lotteryId: string,
   lotteryStatus: LotteryStatus,
   contractAddress: string | undefined,
+  ticketPrice: string,
   participantAddresses: string[] = []
 ): UseEntryReturn {
   const [hasEntered, setHasEntered] = useState(false);
 
-  const { walletAddress, isWorldIdVerified } = useAuthStore();
+  const { walletAddress } = useAuthStore();
 
-  // Integrate useEnterMarket hook for contract interactions
   const {
-    verifyWorldId: contractVerifyWorldId,
-    enter: contractEnter,
-    isVerifying,
-    isPending,
-    isConfirming,
-    isConfirmed,
-    requiredValue,
-    error: contractError,
-    canEnter: canSubmitTx,
+    enterMarket,
     reset,
-  } = useEnterMarket(contractAddress as Address | undefined);
+    step,
+    requiredValue,
+    error,
+  } = useEnterMarket(contractAddress as Address | undefined, ticketPrice);
 
-  // Check if user has already entered on mount
+  // Check if user has already entered
   useEffect(() => {
     if (walletAddress && participantAddresses.length > 0) {
-      const alreadyEntered = participantAddresses.some((addr) => isAddressEqual(addr as Address, walletAddress as Address));
+      const alreadyEntered = participantAddresses.some((addr) =>
+        isAddressEqual(addr as Address, walletAddress as Address)
+      );
       setHasEntered(alreadyEntered);
     }
   }, [walletAddress, participantAddresses]);
 
   // Update hasEntered on successful confirmation
   useEffect(() => {
-    if (isConfirmed) {
+    if (step === 'success') {
       setHasEntered(true);
       toast.success('응모가 완료되었습니다!');
     }
-  }, [isConfirmed]);
+  }, [step]);
 
-  // Computed states
-  const needsVerification = !isWorldIdVerified;
-  const canEnter =
-    isWorldIdVerified && !hasEntered && lotteryStatus === LotteryStatus.OPEN;
-
-  // Combined loading state
-  const isLoading = isVerifying || isPending || isConfirming;
-
-  // Verification trigger - navigates to auth page with return URL
-  const triggerVerification = useCallback(() => {
-    window.location.href = `/auth?returnTo=/lottery/${lotteryId}`;
-  }, [lotteryId]);
-
-  // WorldID verification via contract hook
-  const verifyWorldId = useCallback(async () => {
-    try {
-      await contractVerifyWorldId(lotteryId);
-    } catch (err) {
-      console.error('WorldID verification failed:', err);
-      toast.error(err instanceof Error ? err.message : 'WorldID 인증에 실패했습니다');
-      throw err;
+  // Show error toast
+  useEffect(() => {
+    if (step === 'error' && error) {
+      toast.error(error);
     }
-  }, [contractVerifyWorldId, lotteryId]);
+  }, [step, error]);
 
-  // Entry function using contract hook
+  const canEnter = !hasEntered && lotteryStatus === LotteryStatus.OPEN;
+
   const enter = useCallback(() => {
-    contractEnter();
-  }, [contractEnter]);
+    enterMarket(lotteryId);
+  }, [enterMarket, lotteryId]);
 
   return {
-    isLoading,
     hasEntered,
     canEnter,
-    needsVerification,
-    triggerVerification,
-    verifyWorldId,
     enter,
-    isVerifying,
-    isPending,
-    isConfirming,
-    isConfirmed,
+    step,
     requiredValue,
-    error: contractError,
-    canSubmitTx,
+    error,
     reset,
   };
 }
