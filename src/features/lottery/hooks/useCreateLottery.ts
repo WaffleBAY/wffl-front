@@ -140,18 +140,24 @@ export function useCreateLottery(): UseCreateLotteryReturn {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transactionId }),
         });
-        const data: TxStatusResponse = await res.json();
+        const text = await res.text();
+
+        if (i < 3 || i % 5 === 0) {
+          toast.info(`[receipt ${i}] ${text.slice(0, 100)}`);
+        }
+
+        const data: TxStatusResponse & Record<string, unknown> = JSON.parse(text);
 
         if (data.status === 'success' && data.marketAddress) {
           return data.marketAddress as Address;
         }
 
         if (data.status === 'reverted' || data.status === 'failed') {
-          toast.error('트랜잭션이 실패했습니다');
+          toast.error(`TX ${data.status}: ${JSON.stringify(data).slice(0, 100)}`);
           return null;
         }
       } catch (e) {
-        console.error('Receipt poll error:', e);
+        toast.error(`receipt poll 에러: ${e instanceof Error ? e.message : 'unknown'}`);
       }
 
       await new Promise((r) => setTimeout(r, 3000));

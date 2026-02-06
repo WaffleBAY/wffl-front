@@ -29,23 +29,28 @@ export async function POST(req: NextRequest) {
       `https://developer.worldcoin.org/api/v2/minikit/transaction/${transactionId}?app_id=${appId}&type=transaction`
     );
 
+    const worldText = await worldRes.text();
+
     if (!worldRes.ok) {
       return NextResponse.json({
         status: 'pending',
         message: 'Waiting for relayer',
+        worldApiStatus: worldRes.status,
+        worldApiBody: worldText.slice(0, 200),
       });
     }
 
-    const worldData = await worldRes.json();
+    const worldData = JSON.parse(worldText);
 
     if (worldData.transactionStatus === 'failed') {
-      return NextResponse.json({ status: 'failed' });
+      return NextResponse.json({ status: 'failed', worldData });
     }
 
     if (!worldData.transactionHash) {
       return NextResponse.json({
         status: 'pending',
         transactionStatus: worldData.transactionStatus,
+        worldData,
       });
     }
 
@@ -56,11 +61,16 @@ export async function POST(req: NextRequest) {
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash,
         confirmations: 1,
-        timeout: 10_000,
+        timeout: 15_000,
       });
 
       if (receipt.status === 'reverted') {
-        return NextResponse.json({ status: 'reverted', txHash });
+        return NextResponse.json({
+          status: 'reverted',
+          txHash,
+          receiptStatus: receipt.status,
+          gasUsed: receipt.gasUsed.toString(),
+        });
       }
 
       // Parse MarketCreated event
@@ -84,12 +94,13 @@ export async function POST(req: NextRequest) {
         txHash,
         marketAddress: null,
         logCount: receipt.logs.length,
+        receiptStatus: receipt.status,
       });
-    } catch {
-      // Receipt not available yet but we have the hash
+    } catch (receiptErr) {
       return NextResponse.json({
         status: 'mining',
         txHash,
+        receiptError: receiptErr instanceof Error ? receiptErr.message : 'unknown',
       });
     }
   } catch (e) {
