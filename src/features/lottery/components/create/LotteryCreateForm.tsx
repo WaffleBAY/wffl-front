@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { cn } from '@/lib/utils';
 
 import { lotteryCreateSchema, type LotteryCreateFormData } from '../../schemas/lotteryCreateSchema';
-import { useCreateLottery } from '../../hooks/useCreateLottery';
+import { useCreateLottery, type CreateStep } from '../../hooks/useCreateLottery';
 import { MarketType } from '../../types';
 import { ImageUpload } from './ImageUpload';
 import { DepositGuide } from './DepositGuide';
@@ -26,8 +26,61 @@ interface LotteryCreateFormProps {
   onPreview?: (data: Partial<LotteryCreateFormData>, previewUrl: string | null) => void;
 }
 
+const ALL_STEP_IDS = ['upload', 'sign', 'confirm', 'save'] as const;
+const STEP_LABELS: Record<string, string> = {
+  upload: '이미지 업로드',
+  sign: '서명 요청',
+  confirm: '트랜잭션 확인',
+  save: '마켓 등록',
+};
+
+function ProgressOverlay({ step }: { step: NonNullable<CreateStep> }) {
+  const currentIdx = ALL_STEP_IDS.indexOf(step.id);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
+      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+        {/* Step indicators */}
+        <div className="flex items-center justify-between mb-6">
+          {ALL_STEP_IDS.map((id, i) => {
+            const done = i < currentIdx;
+            const active = i === currentIdx;
+            return (
+              <div key={id} className="flex items-center flex-1 last:flex-none">
+                <div className={cn(
+                  'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors',
+                  done ? 'bg-green-500 text-white' :
+                  active ? 'bg-blue-500 text-white animate-pulse' :
+                  'bg-gray-200 text-gray-400'
+                )}>
+                  {done ? '✓' : i + 1}
+                </div>
+                {i < ALL_STEP_IDS.length - 1 && (
+                  <div className={cn(
+                    'mx-1 h-0.5 flex-1 transition-colors',
+                    i < currentIdx ? 'bg-green-500' : 'bg-gray-200'
+                  )} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Current step info */}
+        <h3 className="text-lg font-semibold text-center mb-2">{step.label}</h3>
+        <p className="text-sm text-gray-500 text-center leading-relaxed">{step.desc}</p>
+
+        {/* Loading spinner */}
+        <div className="flex justify-center mt-5">
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function LotteryCreateForm({ onPreview }: LotteryCreateFormProps) {
-  const { isSubmitting, submit } = useCreateLottery();
+  const { isSubmitting, currentStep, submit } = useCreateLottery();
 
   const form = useForm<LotteryCreateFormData>({
     resolver: zodResolver(lotteryCreateSchema),
@@ -62,6 +115,8 @@ export function LotteryCreateForm({ onPreview }: LotteryCreateFormProps) {
   });
 
   return (
+    <>
+    {currentStep && <ProgressOverlay step={currentStep} />}
     <form onSubmit={onSubmit} className="space-y-6">
       {/* Image Upload */}
       <div className="space-y-2">
@@ -291,5 +346,6 @@ export function LotteryCreateForm({ onPreview }: LotteryCreateFormProps) {
         </Button>
       </div>
     </form>
+    </>
   );
 }

@@ -13,11 +13,26 @@ import { uploadImage } from '@/lib/api/uploads';
 import { MarketType } from '../types';
 import type { LotteryCreateFormData } from '../schemas/lotteryCreateSchema';
 
+export type CreateStep =
+  | { id: 'upload'; label: '이미지 업로드'; desc: '상품 이미지를 서버에 업로드하고 있습니다' }
+  | { id: 'sign'; label: '서명 요청'; desc: '블록체인에 마켓을 등록하려면 지갑 서명이 필요합니다. World App에서 서명을 승인해주세요.' }
+  | { id: 'confirm'; label: '트랜잭션 확인'; desc: '블록체인에서 트랜잭션을 처리하고 있습니다. 최대 2분 정도 소요될 수 있습니다.' }
+  | { id: 'save'; label: '마켓 등록'; desc: '마켓 정보를 저장하고 있습니다' }
+  | null;
+
+const STEPS = {
+  upload: { id: 'upload' as const, label: '이미지 업로드' as const, desc: '상품 이미지를 서버에 업로드하고 있습니다' as const },
+  sign: { id: 'sign' as const, label: '서명 요청' as const, desc: '블록체인에 마켓을 등록하려면 지갑 서명이 필요합니다. World App에서 서명을 승인해주세요.' as const },
+  confirm: { id: 'confirm' as const, label: '트랜잭션 확인' as const, desc: '블록체인에서 트랜잭션을 처리하고 있습니다. 최대 2분 정도 소요될 수 있습니다.' as const },
+  save: { id: 'save' as const, label: '마켓 등록' as const, desc: '마켓 정보를 저장하고 있습니다' as const },
+};
+
 interface UseCreateLotteryReturn {
   isSubmitting: boolean;
-  isPending: boolean;        // waiting for MiniKit response
-  isConfirming: boolean;     // waiting for tx receipt
+  isPending: boolean;
+  isConfirming: boolean;
   txHash: `0x${string}` | undefined;
+  currentStep: CreateStep;
   submit: (data: LotteryCreateFormData) => Promise<void>;
 }
 
@@ -61,6 +76,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
   const [isPending, setIsPending] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>();
+  const [currentStep, setCurrentStep] = useState<CreateStep>(null);
 
   // Ref to store pending form data for backend save
   const pendingDataRef = useRef<{
@@ -117,6 +133,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
     const { formData, imageUrl } = pendingDataRef.current;
 
     try {
+      setCurrentStep(STEPS.save);
       const repository = getLotteryRepository();
       const createParams = convertFormToCreateParams(formData, imageUrl);
 
@@ -127,7 +144,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
 
       const lottery = await repository.create(paramsWithContract);
 
-      toast.success('마켓이 생성되었습니다');
+      toast.success('마켓이 생성되었습니다!');
       router.push(`/lottery/${lottery.id}`);
     } catch (error) {
       toast.error('백엔드 저장에 실패했습니다. 컨트랙트는 생성되었습니다.');
@@ -136,6 +153,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       pendingDataRef.current = null;
       setIsSubmitting(false);
       setIsConfirming(false);
+      setCurrentStep(null);
     }
   }, [router]);
 
@@ -149,7 +167,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       }
 
       // Step 1: Upload image to R2 via backend
-      toast.info('이미지 업로드 중...');
+      setCurrentStep(STEPS.upload);
       const imageUrl = await uploadImage(data.imageFile);
 
       // Step 2: Calculate contract params
@@ -174,7 +192,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
 
       // Step 3: Call contract via MiniKit sendTransaction
       setIsPending(true);
-      toast.info('트랜잭션 서명을 요청합니다...');
+      setCurrentStep(STEPS.sign);
 
       // Format transaction like HAVO reference
       const contractAddr = getWaffleFactoryAddress(CHAIN_ID);
@@ -188,8 +206,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       const txValue = sellerDeposit > BigInt(0)
         ? '0x' + sellerDeposit.toString(16)
         : undefined;
-
-      toast.info(`Contract: ${contractAddr}, args: ${JSON.stringify(txArgs)}, value: ${txValue}`);
 
       let finalPayload;
       try {
@@ -220,7 +236,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       const hash = (finalPayload as { transaction_id: string }).transaction_id as `0x${string}`;
       setTxHash(hash);
       setIsConfirming(true);
-      toast.info('트랜잭션 확인 중...');
+      setCurrentStep(STEPS.confirm);
 
       // Wait for receipt and get market address
       const marketAddress = await waitForReceipt(hash);
@@ -248,6 +264,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       setIsSubmitting(false);
       setIsPending(false);
       setIsConfirming(false);
+      setCurrentStep(null);
     }
   };
 
@@ -256,6 +273,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
     isPending,
     isConfirming,
     txHash,
+    currentStep,
     submit,
   };
 }
