@@ -162,26 +162,24 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       // Format transaction like HAVO reference:
       // - args as raw values (MiniKit handles encoding)
       // - value as hex string
-      const tx: Record<string, unknown> = {
-        address: getWaffleFactoryAddress(CHAIN_ID),
-        abi: waffleFactoryAbi,
-        functionName: 'createMarket',
-        args: [
-          mTypeNum,
-          ticketPriceWei,
-          goalAmountWei,
-          data.winnerCount,
-          durationSeconds,
-        ],
-      };
-
-      // Only include value if > 0 (HAVO pattern)
-      if (sellerDeposit > BigInt(0)) {
-        tx.value = '0x' + sellerDeposit.toString(16);
-      }
-
       const { finalPayload } = await MiniKit.commandsAsync.sendTransaction({
-        transaction: [tx],
+        transaction: [
+          {
+            address: getWaffleFactoryAddress(CHAIN_ID),
+            abi: waffleFactoryAbi as readonly object[],
+            functionName: 'createMarket',
+            args: [
+              mTypeNum,
+              ticketPriceWei,
+              goalAmountWei,
+              data.winnerCount,
+              durationSeconds,
+            ],
+            ...(sellerDeposit > BigInt(0)
+              ? { value: '0x' + sellerDeposit.toString(16) }
+              : {}),
+          },
+        ],
       });
 
       setIsPending(false);
