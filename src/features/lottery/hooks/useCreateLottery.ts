@@ -182,7 +182,12 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       toast.success('마켓이 생성되었습니다!');
       router.push(`/lottery/${lottery.id}`);
     } catch (error) {
-      toast.error('백엔드 저장에 실패했습니다. 컨트랙트는 생성되었습니다.');
+      const errMsg = error instanceof Error
+        ? error.message
+        : (error as { response?: { data?: unknown } })?.response?.data
+          ? JSON.stringify((error as { response: { data: unknown } }).response.data)
+          : String(error);
+      toast.error(`백엔드 저장 실패: ${errMsg.slice(0, 200)}`);
       console.error('Backend save error:', error);
     } finally {
       pendingDataRef.current = null;
@@ -202,7 +207,9 @@ export function useCreateLottery(): UseCreateLotteryReturn {
 
       // Step 1: Upload image
       setCurrentStep(STEPS.upload);
+      console.log('[Create] Starting image upload, file:', data.imageFile.name, data.imageFile.size);
       const imageUrl = await uploadImage(data.imageFile);
+      console.log('[Create] Image uploaded:', imageUrl);
 
       // Step 2: Calculate contract params
       setCurrentStep(STEPS.sign);
