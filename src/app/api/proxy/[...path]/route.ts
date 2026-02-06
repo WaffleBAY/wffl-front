@@ -12,6 +12,8 @@ async function proxyRequest(request: NextRequest, path: string) {
       headers.set(key, value);
     }
   });
+  // Skip ngrok browser warning for proxied requests
+  headers.set('ngrok-skip-browser-warning', 'true');
 
   const init: RequestInit = {
     method: request.method,

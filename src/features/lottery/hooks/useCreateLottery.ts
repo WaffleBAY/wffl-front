@@ -88,7 +88,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
   // Poll World Developer API directly (no server proxy needed)
   const pollForMarketAddress = useCallback(async (transactionId: string): Promise<Address | null> => {
     const appId = process.env.NEXT_PUBLIC_APP_ID;
-    toast.info(`polling 시작: ${transactionId.slice(0, 8)}...`);
 
     // Step 1: Poll for real tx hash
     let realHash: string | null = null;
@@ -98,10 +97,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         const url = `https://developer.worldcoin.org/api/v2/minikit/transaction/${transactionId}?app_id=${appId}&type=transaction`;
         const res = await fetch(url);
         const text = await res.text();
-
-        if (i === 0 || i % 5 === 0) {
-          toast.info(`[${i}] status=${res.status} body=${text.slice(0, 80)}`);
-        }
 
         if (!res.ok) {
           await new Promise((r) => setTimeout(r, 2000));
@@ -118,11 +113,10 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         if (data.transactionHash) {
           realHash = data.transactionHash;
           setTxHash(realHash as `0x${string}`);
-          toast.info(`실제 TX: ${realHash!.slice(0, 10)}...`);
           break;
         }
-      } catch (e) {
-        toast.error(`poll 에러: ${e instanceof Error ? e.message : 'unknown'}`);
+      } catch {
+        // Retry silently
       }
 
       await new Promise((r) => setTimeout(r, 2000));
@@ -133,7 +127,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       return null;
     }
 
-    // Step 2: Get receipt via server API route (pass txHash directly to skip re-polling World API)
+    // Step 2: Get receipt via server API route
     for (let i = 0; i < 20; i++) {
       try {
         const res = await fetch('/api/transaction/status', {
@@ -141,30 +135,23 @@ export function useCreateLottery(): UseCreateLotteryReturn {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ transactionId, txHash: realHash }),
         });
-        const text = await res.text();
-
-        if (i < 3 || i % 5 === 0) {
-          toast.info(`[receipt ${i}] ${text.slice(0, 100)}`);
-        }
-
-        const data: TxStatusResponse & Record<string, unknown> = JSON.parse(text);
+        const data: TxStatusResponse & Record<string, unknown> = await res.json();
 
         if (data.status === 'success' && data.marketAddress) {
           return data.marketAddress as Address;
         }
 
         if (data.status === 'reverted' || data.status === 'failed') {
-          toast.error(`TX ${data.status}: ${JSON.stringify(data).slice(0, 100)}`);
+          toast.error('트랜잭션이 실패했습니다');
           return null;
         }
 
-        // Transaction confirmed but no MarketCreated event found — stop polling
         if (data.status === 'success_no_event') {
-          toast.error(`TX 성공했지만 MarketCreated 이벤트를 찾을 수 없습니다. logs=${data.logCount}`);
+          toast.error('마켓 생성 이벤트를 찾을 수 없습니다');
           return null;
         }
-      } catch (e) {
-        toast.error(`receipt poll 에러: ${e instanceof Error ? e.message : 'unknown'}`);
+      } catch {
+        // Retry silently
       }
 
       await new Promise((r) => setTimeout(r, 3000));

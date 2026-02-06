@@ -2,17 +2,10 @@
 
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
-import { CalendarIcon } from 'lucide-react';
-
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Calendar } from '@/components/ui/calendar';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { cn } from '@/lib/utils';
 
 import { lotteryCreateSchema, type LotteryCreateFormData } from '../../schemas/lotteryCreateSchema';
 import { useCreateLottery, type CreateStep } from '../../hooks/useCreateLottery';
@@ -280,41 +273,33 @@ export function LotteryCreateForm({ onPreview }: LotteryCreateFormProps) {
         />
       </div>
 
-      {/* Expiry Date */}
+      {/* Expiry Date & Time */}
       <div className="space-y-2">
-        <Label>만료 날짜 *</Label>
+        <Label htmlFor="expiresAt">만료 날짜 및 시간 *</Label>
         <Controller
           name="expiresAt"
           control={control}
-          render={({ field }) => (
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className={cn(
-                    'w-full justify-start text-left font-normal',
-                    !field.value && 'text-muted-foreground'
-                  )}
-                >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {field.value
-                    ? format(field.value, 'PPP', { locale: ko })
-                    : '날짜를 선택하세요'}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <Calendar
-                  mode="single"
-                  selected={field.value}
-                  onSelect={field.onChange}
-                  disabled={(date) => date <= new Date()}
-                  locale={ko}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
-          )}
+          render={({ field }) => {
+            // Convert Date to datetime-local string (YYYY-MM-DDThh:mm)
+            const toLocalString = (d: Date) => {
+              const pad = (n: number) => n.toString().padStart(2, '0');
+              return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+            };
+            // Minimum: current time
+            const now = new Date();
+            return (
+              <Input
+                id="expiresAt"
+                type="datetime-local"
+                value={field.value ? toLocalString(field.value) : ''}
+                min={toLocalString(now)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  field.onChange(val ? new Date(val) : undefined);
+                }}
+              />
+            );
+          }}
         />
         {errors.expiresAt && (
           <p className="text-sm text-destructive">{errors.expiresAt.message}</p>
