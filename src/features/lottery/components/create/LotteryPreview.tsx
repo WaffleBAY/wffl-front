@@ -83,7 +83,7 @@ export function LotteryPreview({ formData, previewUrl }: LotteryPreviewProps) {
 
           {/* Additional Info */}
           <div className="pt-2 border-t text-xs text-muted-foreground space-y-1">
-            <p>목표 금액: {formatWLD(targetAmount || 0)} WLD</p>
+            <p>목표 금액: {formatWLD(BigInt(targetAmount || 0))} WLD</p>
             <p>당첨 인원: {winnerCount || 1}명</p>
           </div>
         </CardContent>
