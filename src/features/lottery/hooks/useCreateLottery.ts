@@ -176,7 +176,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       };
 
       // Only include value if > 0 (HAVO pattern)
-      if (sellerDeposit > 0n) {
+      if (sellerDeposit > BigInt(0)) {
         tx.value = '0x' + sellerDeposit.toString(16);
       }
 
