@@ -50,9 +50,9 @@ export interface ILotteryRepository {
     value: string
   ): Promise<void>;
 
-  // Contract actions (winner)
-  confirmReceipt(lotteryId: string): Promise<void>;
+  // Contract actions (settlement after REVEALED)
+  settle(lotteryId: string): Promise<void>;
 
-  // Contract actions (anyone after failure or non-winner after reveal)
+  // Contract actions (FAILED: deposit + pool share; COMPLETED: deposit only)
   claimRefund(lotteryId: string): Promise<void>;
 }

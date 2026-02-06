@@ -4,7 +4,7 @@ export {
   VALID_TRANSITIONS,
   isTerminalStatus,
   isEntryOpen,
-  canConfirmReceipt,
+  canSettle,
   canClaimRefund,
 } from './LotteryStatus';
 

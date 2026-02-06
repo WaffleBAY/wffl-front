@@ -108,35 +108,7 @@ export const MOCK_LOTTERIES: Lottery[] = [
     closedAt: new Date(now * 1000 - 1 * DAY * 1000).toISOString(),
   },
 
-  // COMMITTED 상태 (비밀값 제출됨 - reveal 대기)
-  {
-    id: 'lottery-5',
-    contractAddress: '0xaaaa1111bbbb2222cccc3333dddd4444eeee5555',
-    title: 'Nintendo Switch OLED',
-    description: '더 커진 OLED 화면으로 게임을 즐기세요!',
-    imageUrl: 'https://images.unsplash.com/photo-1578303512597-81e6cc155b3e?w=800',
-    prizeDescription: 'Nintendo Switch OLED 화이트',
-    marketType: MarketType.LOTTERY,
-    ticketPrice: toWei(0.025),
-    participantDeposit: toWei(0.005),
-    sellerDeposit: '0',
-    prizePool: toWei(2.5),
-    goalAmount: toWei(2.5),
-    preparedQuantity: 1,
-    endTime: now - 2 * DAY,
-    status: LotteryStatus.COMMITTED,
-    participantCount: 100,
-    seller: '0xaaaa1111bbbb2222cccc3333dddd4444eeee5555',
-    winners: [],
-    snapshotBlock: 12345700,
-    commitment: '0xabcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890',
-    nonce: 42,
-    shippingRegions: ['WORLDWIDE'],
-    createdAt: new Date(now * 1000 - 15 * DAY * 1000).toISOString(),
-    closedAt: new Date(now * 1000 - 2 * DAY * 1000).toISOString(),
-  },
-
-  // REVEALED 상태 (당첨자 발표 - confirmReceipt 대기)
+  // REVEALED 상태 (당첨자 발표 - settle 대기)
   {
     id: 'lottery-6',
     contractAddress: '0xffff0000aaaa1111bbbb2222cccc3333dddd4444',

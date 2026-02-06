@@ -27,11 +27,12 @@ describe('E2E Flow: Complete Lottery Lifecycle', () => {
       // Convert to contract params
       const ticketPriceWei = BigInt(Math.floor(formData.entryPrice * 1e18))
       const goalAmountWei = BigInt(Math.floor(formData.targetAmount * 1e18))
-      const sellerDeposit = BigInt(0) // LOTTERY has no seller deposit
+      // Both LOTTERY and RAFFLE have 15% seller deposit
+      const sellerDeposit = (goalAmountWei * BigInt(15)) / BigInt(100)
 
       expect(ticketPriceWei).toBe(BigInt('1000000000000000'))
       expect(goalAmountWei).toBe(BigInt('10000000000000000'))
-      expect(sellerDeposit).toBe(BigInt(0))
+      expect(sellerDeposit).toBe(BigInt('1500000000000000')) // 15% of 0.01 ETH
     })
 
     it('2. Lottery starts in CREATED status', () => {
@@ -64,19 +65,13 @@ describe('E2E Flow: Complete Lottery Lifecycle', () => {
       expect(lottery.participantCount).toBeGreaterThan(0)
     })
 
-    it('6. Operator commits secret (CLOSED -> COMMITTED)', () => {
-      const lottery = createMockLotteryWithStatus(LotteryStatus.COMMITTED)
-      expect(lottery.status).toBe(LotteryStatus.COMMITTED)
-      expect(lottery.commitment).toBeDefined()
-    })
-
-    it('7. Operator reveals winner (COMMITTED -> REVEALED)', () => {
+    it('6. Seller reveals secret and winners are picked (CLOSED -> REVEALED)', () => {
       const lottery = createMockLotteryWithStatus(LotteryStatus.REVEALED)
       expect(lottery.status).toBe(LotteryStatus.REVEALED)
       expect(lottery.winners).toHaveLength(1)
     })
 
-    it('8. Winner confirms receipt (REVEALED -> COMPLETED)', () => {
+    it('7. Settlement completes the market (REVEALED -> COMPLETED)', () => {
       const lottery = createMockLotteryWithStatus(LotteryStatus.COMPLETED)
       expect(lottery.status).toBe(LotteryStatus.COMPLETED)
     })
@@ -246,21 +241,7 @@ describe('E2E Flow: User Actions by Status', () => {
   })
 
   describe('Winner', () => {
-    it('can confirm receipt in REVEALED status', () => {
-      const lottery = createMockLottery({
-        status: LotteryStatus.REVEALED,
-        winners: [userAddress],
-      })
-
-      const isWinner = lottery.winners.some(
-        (w) => w.toLowerCase() === userAddress.toLowerCase()
-      )
-      const canConfirm = lottery.status === LotteryStatus.REVEALED && isWinner
-
-      expect(canConfirm).toBe(true)
-    })
-
-    it('cannot claim refund (gets prize instead)', () => {
+    it('can see winner announcement in REVEALED status', () => {
       const lottery = createMockLottery({
         status: LotteryStatus.REVEALED,
         winners: [userAddress],
@@ -270,15 +251,14 @@ describe('E2E Flow: User Actions by Status', () => {
         (w) => w.toLowerCase() === userAddress.toLowerCase()
       )
 
-      // Winner should use confirmReceipt, not claimRefund
       expect(isWinner).toBe(true)
     })
   })
 
   describe('Non-Winner (loser)', () => {
-    it('can claim deposit refund in REVEALED status', () => {
+    it('can claim deposit refund after COMPLETED', () => {
       const lottery = createMockLottery({
-        status: LotteryStatus.REVEALED,
+        status: LotteryStatus.COMPLETED,
         winners: ['0xOtherWinner123456789012345678901234567890'],
       })
 
@@ -286,7 +266,7 @@ describe('E2E Flow: User Actions by Status', () => {
         (w) => w.toLowerCase() === userAddress.toLowerCase()
       )
       const isParticipant = true
-      const canRefund = lottery.status === LotteryStatus.REVEALED && isParticipant && !isWinner
+      const canRefund = lottery.status === LotteryStatus.COMPLETED && isParticipant && !isWinner
 
       expect(isWinner).toBe(false)
       expect(canRefund).toBe(true)

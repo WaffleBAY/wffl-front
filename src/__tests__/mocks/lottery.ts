@@ -47,12 +47,6 @@ export function createMockLotteryWithStatus(status: LotteryStatus): Lottery {
         participantCount: 5,
         closedAt: new Date().toISOString(),
       }
-    case LotteryStatus.COMMITTED:
-      return {
-        ...base,
-        participantCount: 5,
-        commitment: '0xcommitment',
-      }
     case LotteryStatus.REVEALED:
       return {
         ...base,

@@ -6,7 +6,6 @@ import type { OpenMarketStep, SettlementStep } from '../../hooks/useContractWrit
 import { CreatedStatusUI } from './CreatedStatusUI';
 import { OpenStatusUI } from './OpenStatusUI';
 import { ClosedStatusUI } from './ClosedStatusUI';
-import { CommittedStatusUI } from './CommittedStatusUI';
 import { RevealedStatusUI } from './RevealedStatusUI';
 import { CompletedStatusUI } from './CompletedStatusUI';
 import { FailedStatusUI } from './FailedStatusUI';
@@ -16,8 +15,8 @@ interface LotteryStatusUIProps {
   hasEntered: boolean;
   onOpenMarket?: () => void;
   openMarketStep?: OpenMarketStep;
-  onConfirmReceipt?: () => void;
-  confirmReceiptStep?: SettlementStep;
+  onSettle?: () => void;
+  settleStep?: SettlementStep;
   onClaimRefund?: () => void;
   claimRefundStep?: SettlementStep;
 }
@@ -26,7 +25,7 @@ interface LotteryStatusUIProps {
  * Status-based UI renderer for lottery detail page
  * Renders the appropriate UI component based on lottery status
  *
- * Status flow: CREATED → OPEN → CLOSED → COMMITTED → REVEALED → COMPLETED
+ * Status flow: CREATED → OPEN → CLOSED → REVEALED → COMPLETED
  *                                  ↘ FAILED ↙
  */
 export function LotteryStatusUI({
@@ -34,8 +33,8 @@ export function LotteryStatusUI({
   hasEntered,
   onOpenMarket,
   openMarketStep,
-  onConfirmReceipt,
-  confirmReceiptStep,
+  onSettle,
+  settleStep,
   onClaimRefund,
   claimRefundStep,
 }: LotteryStatusUIProps) {
@@ -47,14 +46,12 @@ export function LotteryStatusUI({
         return <OpenStatusUI lottery={lottery} hasEntered={hasEntered} />;
       case LotteryStatus.CLOSED:
         return <ClosedStatusUI lottery={lottery} />;
-      case LotteryStatus.COMMITTED:
-        return <CommittedStatusUI lottery={lottery} />;
       case LotteryStatus.REVEALED:
         return (
           <RevealedStatusUI
             lottery={lottery}
-            onConfirmReceipt={onConfirmReceipt}
-            confirmReceiptStep={confirmReceiptStep}
+            onSettle={onSettle}
+            settleStep={settleStep}
             onClaimRefund={onClaimRefund}
             claimRefundStep={claimRefundStep}
           />

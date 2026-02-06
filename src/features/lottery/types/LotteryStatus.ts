@@ -5,9 +5,8 @@
 export enum LotteryStatus {
   CREATED = 'CREATED',       // 생성됨 (판매자가 openMarket 호출 전)
   OPEN = 'OPEN',             // 응모 진행 중
-  CLOSED = 'CLOSED',         // 마감됨 (추첨 대기)
-  COMMITTED = 'COMMITTED',   // 비밀값 제출됨 (reveal 대기)
-  REVEALED = 'REVEALED',     // 당첨자 확정 (confirmReceipt 대기)
+  CLOSED = 'CLOSED',         // 마감됨 (reveal 대기)
+  REVEALED = 'REVEALED',     // 당첨자 확정 (settle 대기)
   COMPLETED = 'COMPLETED',   // 정산 완료
   FAILED = 'FAILED',         // 목표 미달 또는 타임아웃
 }
@@ -27,8 +26,7 @@ export enum MarketType {
 export const VALID_TRANSITIONS: Record<LotteryStatus, LotteryStatus[]> = {
   [LotteryStatus.CREATED]: [LotteryStatus.OPEN],
   [LotteryStatus.OPEN]: [LotteryStatus.CLOSED, LotteryStatus.FAILED],
-  [LotteryStatus.CLOSED]: [LotteryStatus.COMMITTED, LotteryStatus.FAILED],
-  [LotteryStatus.COMMITTED]: [LotteryStatus.REVEALED, LotteryStatus.FAILED],
+  [LotteryStatus.CLOSED]: [LotteryStatus.REVEALED, LotteryStatus.FAILED],
   [LotteryStatus.REVEALED]: [LotteryStatus.COMPLETED],
   [LotteryStatus.COMPLETED]: [],
   [LotteryStatus.FAILED]: [],
@@ -49,15 +47,17 @@ export function isEntryOpen(status: LotteryStatus): boolean {
 }
 
 /**
- * Check if winner can confirm receipt
+ * Check if settle can be called (after winners revealed)
  */
-export function canConfirmReceipt(status: LotteryStatus): boolean {
+export function canSettle(status: LotteryStatus): boolean {
   return status === LotteryStatus.REVEALED;
 }
 
 /**
  * Check if refunds are available
+ * FAILED: deposit + pool share returned
+ * COMPLETED: deposit only returned (for all participants)
  */
 export function canClaimRefund(status: LotteryStatus): boolean {
-  return status === LotteryStatus.FAILED || status === LotteryStatus.REVEALED;
+  return status === LotteryStatus.FAILED || status === LotteryStatus.COMPLETED;
 }

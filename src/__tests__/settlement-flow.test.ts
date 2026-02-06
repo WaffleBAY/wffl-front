@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { LotteryStatus, MarketType } from '@/features/lottery/types'
-import { canConfirmReceipt, canClaimRefund } from '@/features/lottery/types/LotteryStatus'
+import { canSettle, canClaimRefund } from '@/features/lottery/types/LotteryStatus'
 import { isUserWinner, getWinnerCount } from '@/features/lottery/types/Lottery'
 import { createMockLottery, createMockRaffle, createMockLotteryWithStatus } from './mocks/lottery'
 
 /**
- * Tests for the settlement flow (confirmReceipt, claimRefund)
+ * Tests for the settlement flow (settle, claimRefund)
  */
 
 describe('Settlement Flow - Winner Determination', () => {
@@ -63,45 +63,36 @@ describe('Settlement Flow - Winner Determination', () => {
 })
 
 describe('Settlement Flow - Action Eligibility', () => {
-  describe('confirmReceipt eligibility', () => {
+  describe('settle eligibility', () => {
     it('allowed only in REVEALED status', () => {
-      expect(canConfirmReceipt(LotteryStatus.REVEALED)).toBe(true)
-      expect(canConfirmReceipt(LotteryStatus.CREATED)).toBe(false)
-      expect(canConfirmReceipt(LotteryStatus.OPEN)).toBe(false)
-      expect(canConfirmReceipt(LotteryStatus.CLOSED)).toBe(false)
-      expect(canConfirmReceipt(LotteryStatus.COMMITTED)).toBe(false)
-      expect(canConfirmReceipt(LotteryStatus.COMPLETED)).toBe(false)
-      expect(canConfirmReceipt(LotteryStatus.FAILED)).toBe(false)
+      expect(canSettle(LotteryStatus.REVEALED)).toBe(true)
+      expect(canSettle(LotteryStatus.CREATED)).toBe(false)
+      expect(canSettle(LotteryStatus.OPEN)).toBe(false)
+      expect(canSettle(LotteryStatus.CLOSED)).toBe(false)
+      expect(canSettle(LotteryStatus.COMPLETED)).toBe(false)
+      expect(canSettle(LotteryStatus.FAILED)).toBe(false)
     })
 
-    it('only winner can confirm', () => {
+    it('anyone can call settle in REVEALED status', () => {
       const lottery = createMockLotteryWithStatus(LotteryStatus.REVEALED)
-      lottery.winners = ['0xWinnerAddress1234567890123456789012345678']
-
-      const winnerAddress = '0xWinnerAddress1234567890123456789012345678'
-      const loserAddress = '0xLoserAddress12345678901234567890123456789'
-
-      expect(canConfirmReceipt(lottery.status)).toBe(true)
-      expect(isUserWinner(lottery, winnerAddress)).toBe(true)
-      expect(isUserWinner(lottery, loserAddress)).toBe(false)
+      expect(canSettle(lottery.status)).toBe(true)
     })
   })
 
   describe('claimRefund eligibility', () => {
-    it('allowed in FAILED status (all participants)', () => {
+    it('allowed in FAILED status (all participants get deposit + pool share)', () => {
       expect(canClaimRefund(LotteryStatus.FAILED)).toBe(true)
     })
 
-    it('allowed in REVEALED status (non-winners)', () => {
-      expect(canClaimRefund(LotteryStatus.REVEALED)).toBe(true)
+    it('allowed in COMPLETED status (deposit refund for all participants)', () => {
+      expect(canClaimRefund(LotteryStatus.COMPLETED)).toBe(true)
     })
 
     it('not allowed in other statuses', () => {
       expect(canClaimRefund(LotteryStatus.CREATED)).toBe(false)
       expect(canClaimRefund(LotteryStatus.OPEN)).toBe(false)
       expect(canClaimRefund(LotteryStatus.CLOSED)).toBe(false)
-      expect(canClaimRefund(LotteryStatus.COMMITTED)).toBe(false)
-      expect(canClaimRefund(LotteryStatus.COMPLETED)).toBe(false)
+      expect(canClaimRefund(LotteryStatus.REVEALED)).toBe(false)
     })
   })
 })
@@ -180,20 +171,21 @@ describe('Settlement Flow - User Role Determination', () => {
 })
 
 describe('Settlement Flow - Refund Amount Calculation', () => {
-  // Based on contract logic
+  // Based on new contract logic
+  // FAILED: deposit + pool share
+  // COMPLETED: deposit only
   function calculateRefundAmount(
     ticketPrice: bigint,
     participantDeposit: bigint,
-    isWinner: boolean,
     status: LotteryStatus
   ): bigint {
     if (status === LotteryStatus.FAILED) {
-      // Full refund: ticket + deposit
+      // Full refund: ticket + deposit (pool share)
       return ticketPrice + participantDeposit
     }
 
-    if (status === LotteryStatus.REVEALED && !isWinner) {
-      // Non-winner: only deposit refunded (ticket price goes to pool)
+    if (status === LotteryStatus.COMPLETED) {
+      // Deposit only
       return participantDeposit
     }
 
@@ -204,43 +196,32 @@ describe('Settlement Flow - Refund Amount Calculation', () => {
     const ticketPrice = BigInt('1000000000000000') // 0.001 ETH
     const deposit = BigInt('5000000000000000') // 0.005 ETH
 
-    const refund = calculateRefundAmount(ticketPrice, deposit, false, LotteryStatus.FAILED)
+    const refund = calculateRefundAmount(ticketPrice, deposit, LotteryStatus.FAILED)
     expect(refund).toBe(BigInt('6000000000000000')) // 0.006 ETH
   })
 
-  it('deposit only refund for non-winner in REVEALED', () => {
+  it('deposit only refund for COMPLETED', () => {
     const ticketPrice = BigInt('1000000000000000')
     const deposit = BigInt('5000000000000000')
 
-    const refund = calculateRefundAmount(ticketPrice, deposit, false, LotteryStatus.REVEALED)
+    const refund = calculateRefundAmount(ticketPrice, deposit, LotteryStatus.COMPLETED)
     expect(refund).toBe(BigInt('5000000000000000')) // Only deposit
-  })
-
-  it('no refund for winner (they get the prize)', () => {
-    const ticketPrice = BigInt('1000000000000000')
-    const deposit = BigInt('5000000000000000')
-
-    // Winner uses confirmReceipt, not claimRefund
-    // If they accidentally call claimRefund, should get 0 or revert
-    const refund = calculateRefundAmount(ticketPrice, deposit, true, LotteryStatus.REVEALED)
-    expect(refund).toBe(BigInt(0))
   })
 
   it('handles zero ticket price correctly', () => {
     const ticketPrice = BigInt(0)
     const deposit = BigInt('5000000000000000')
 
-    const refund = calculateRefundAmount(ticketPrice, deposit, false, LotteryStatus.FAILED)
+    const refund = calculateRefundAmount(ticketPrice, deposit, LotteryStatus.FAILED)
     expect(refund).toBe(BigInt('5000000000000000')) // Only deposit
   })
 })
 
 describe('Settlement Flow - State Transitions', () => {
-  it('REVEALED -> COMPLETED after confirmReceipt', () => {
+  it('REVEALED -> COMPLETED after settle', () => {
     const lottery = createMockLotteryWithStatus(LotteryStatus.REVEALED)
-    // After confirmReceipt, status should become COMPLETED
-    expect(canConfirmReceipt(lottery.status)).toBe(true)
-    // Contract would transition to COMPLETED after successful confirmReceipt
+    expect(canSettle(lottery.status)).toBe(true)
+    // Contract would transition to COMPLETED after successful settle
   })
 
   it('FAILED is terminal (no further transitions)', () => {
@@ -249,9 +230,9 @@ describe('Settlement Flow - State Transitions', () => {
     // After all refunds claimed, status stays FAILED
   })
 
-  it('COMPLETED is terminal (no actions available)', () => {
+  it('COMPLETED allows deposit refund', () => {
     const lottery = createMockLotteryWithStatus(LotteryStatus.COMPLETED)
-    expect(canConfirmReceipt(lottery.status)).toBe(false)
-    expect(canClaimRefund(lottery.status)).toBe(false)
+    expect(canSettle(lottery.status)).toBe(false)
+    expect(canClaimRefund(lottery.status)).toBe(true)
   })
 })

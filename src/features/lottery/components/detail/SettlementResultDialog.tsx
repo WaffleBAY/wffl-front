@@ -12,7 +12,7 @@ import {
 import { PartyPopper, AlertCircle, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type SettlementAction = 'confirmReceipt' | 'claimRefund';
+type SettlementAction = 'settle' | 'claimRefund';
 
 interface SettlementResultDialogProps {
   action: SettlementAction;
@@ -25,7 +25,7 @@ interface SettlementResultDialogProps {
 }
 
 /**
- * Dialog to show settlement transaction result (confirmReceipt or claimRefund).
+ * Dialog to show settlement transaction result (settle or claimRefund).
  * Success: Celebration message with appropriate icon
  * Error: Error message with retry button
  */
@@ -43,12 +43,12 @@ export function SettlementResultDialog({
   if (!isOpen) return null;
 
   if (isSuccess) {
-    const isConfirmReceipt = action === 'confirmReceipt';
-    const title = isConfirmReceipt ? '수령 확인 완료!' : '환불 완료!';
-    const Icon = isConfirmReceipt ? PartyPopper : Coins;
-    const iconColor = isConfirmReceipt ? 'text-yellow-500' : 'text-green-500';
-    const description = isConfirmReceipt
-      ? `보증금 ${refundAmount || ''}이 반환되었습니다.`
+    const isSettle = action === 'settle';
+    const title = isSettle ? '정산 완료!' : '환불 완료!';
+    const Icon = isSettle ? PartyPopper : Coins;
+    const iconColor = isSettle ? 'text-yellow-500' : 'text-green-500';
+    const description = isSettle
+      ? '마켓 정산이 완료되었습니다.'
       : `환불금 ${refundAmount || ''}이 반환되었습니다.`;
 
     return (
@@ -71,7 +71,7 @@ export function SettlementResultDialog({
 
   // Error case
   const errorTitle =
-    action === 'confirmReceipt' ? '수령 확인 실패' : '환불 요청 실패';
+    action === 'settle' ? '정산 실패' : '환불 요청 실패';
 
   return (
     <AlertDialog open onOpenChange={onClose}>

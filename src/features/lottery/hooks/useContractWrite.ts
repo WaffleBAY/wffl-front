@@ -10,9 +10,9 @@ import type { BaseError } from 'wagmi'
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js'
 import { CHAIN_ID, PARTICIPANT_DEPOSIT } from '@/config/contracts'
 import {
-  useWriteWaffleMarketConfirmReceipt,
+  useWriteWaffleMarketSettle,
   useWriteWaffleMarketClaimRefund,
-  useSimulateWaffleMarketConfirmReceipt,
+  useSimulateWaffleMarketSettle,
   useSimulateWaffleMarketClaimRefund,
   useWriteWaffleMarketEnter,
   useSimulateWaffleMarketEnter,
@@ -27,7 +27,7 @@ import {
 export type OpenMarketStep = 'idle' | 'signing' | 'confirming' | 'success' | 'error'
 
 /**
- * Step tracking for settlement transaction progress (confirmReceipt, claimRefund).
+ * Step tracking for settlement transaction progress (settle, claimRefund).
  */
 export type SettlementStep = 'idle' | 'signing' | 'confirming' | 'success' | 'error'
 
@@ -42,15 +42,16 @@ interface WorldIdProof {
 }
 
 /**
- * Hook for confirming receipt of a prize as a winner.
+ * Hook for settling a market after winners are revealed.
+ * LOTTERY: 95% → winner, 5% → ops, seller deposit returned.
+ * RAFFLE: pool + deposit → seller.
  * Uses simulate -> write -> wait pattern for safe transaction execution.
- * Includes step tracking for UI feedback.
  */
-export function useConfirmReceipt(marketAddress: Address | undefined) {
+export function useSettle(marketAddress: Address | undefined) {
   const [step, setStep] = useState<SettlementStep>('idle')
 
   // Simulate first to catch errors before spending gas
-  const { data: simulateData, error: simulateError } = useSimulateWaffleMarketConfirmReceipt({
+  const { data: simulateData, error: simulateError } = useSimulateWaffleMarketSettle({
     address: marketAddress,
     chainId: CHAIN_ID,
     query: { enabled: !!marketAddress },
@@ -63,7 +64,7 @@ export function useConfirmReceipt(marketAddress: Address | undefined) {
     isPending,
     writeContract,
     reset: resetWrite,
-  } = useWriteWaffleMarketConfirmReceipt()
+  } = useWriteWaffleMarketSettle()
 
   // Wait for confirmation
   const {
@@ -85,7 +86,7 @@ export function useConfirmReceipt(marketAddress: Address | undefined) {
     }
   }, [isPending, hash, isConfirming, isConfirmed, writeError, receiptError])
 
-  const confirm = useCallback(() => {
+  const settle = useCallback(() => {
     if (simulateData?.request) {
       setStep('signing')
       writeContract(simulateData.request)
@@ -101,7 +102,7 @@ export function useConfirmReceipt(marketAddress: Address | undefined) {
   const error = simulateError || writeError || receiptError
 
   return {
-    confirm,
+    settle,
     reset,
     step,
     isPending,
@@ -109,14 +110,15 @@ export function useConfirmReceipt(marketAddress: Address | undefined) {
     isConfirmed,
     hash,
     error: error ? (error as BaseError).shortMessage || error.message : null,
-    canConfirm: !!simulateData?.request,
+    canSettle: !!simulateData?.request,
   }
 }
 
 /**
- * Hook for claiming a refund when a market fails.
+ * Hook for claiming a refund.
+ * FAILED: deposit + pool share returned.
+ * COMPLETED: deposit only returned (for all participants).
  * Uses simulate -> write -> wait pattern for safe transaction execution.
- * Includes step tracking for UI feedback.
  */
 export function useClaimRefund(marketAddress: Address | undefined) {
   const [step, setStep] = useState<SettlementStep>('idle')

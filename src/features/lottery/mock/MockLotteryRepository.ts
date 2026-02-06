@@ -34,11 +34,8 @@ export class MockLotteryRepository implements ILotteryRepository {
     const now = Math.floor(Date.now() / 1000);
     const mockContractAddress = `0x${Math.random().toString(16).slice(2, 10).padEnd(40, '0')}`;
 
-    // Calculate sellerDeposit: 15% of goalAmount for RAFFLE, 0 for LOTTERY
-    const sellerDeposit =
-      data.marketType === MarketType.RAFFLE
-        ? ((BigInt(data.goalAmount) * BigInt(15)) / BigInt(100)).toString()
-        : '0';
+    // Calculate sellerDeposit: 15% of goalAmount for both LOTTERY and RAFFLE
+    const sellerDeposit = ((BigInt(data.goalAmount) * BigInt(15)) / BigInt(100)).toString();
 
     const newLottery: Lottery = {
       id: `lottery-${Date.now()}`,
@@ -118,7 +115,7 @@ export class MockLotteryRepository implements ILotteryRepository {
     const lottery = this.lotteries.find((l) => l.id === lotteryId);
     if (!lottery) return null;
 
-    // Mock: current user has entered all OPEN/CLOSED/COMMITTED/REVEALED lotteries
+    // Mock: current user has entered all OPEN/CLOSED/REVEALED lotteries
     const hasEntered =
       address.toLowerCase() === CURRENT_USER_ADDRESS.toLowerCase() &&
       lottery.participantCount > 0;
@@ -237,7 +234,7 @@ export class MockLotteryRepository implements ILotteryRepository {
     lottery.prizePool = (currentPrizePool + prizePoolAddition).toString();
   }
 
-  async confirmReceipt(lotteryId: string): Promise<void> {
+  async settle(lotteryId: string): Promise<void> {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
@@ -247,7 +244,7 @@ export class MockLotteryRepository implements ILotteryRepository {
     }
 
     if (lottery.status !== LotteryStatus.REVEALED) {
-      throw new Error(`Cannot confirm receipt for lottery in status: ${lottery.status}`);
+      throw new Error(`Cannot settle lottery in status: ${lottery.status}`);
     }
 
     lottery.status = LotteryStatus.COMPLETED;
@@ -265,7 +262,7 @@ export class MockLotteryRepository implements ILotteryRepository {
 
     if (
       lottery.status !== LotteryStatus.FAILED &&
-      lottery.status !== LotteryStatus.REVEALED
+      lottery.status !== LotteryStatus.COMPLETED
     ) {
       throw new Error(`Cannot claim refund for lottery in status: ${lottery.status}`);
     }

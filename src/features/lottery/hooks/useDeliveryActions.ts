@@ -4,7 +4,7 @@ import { useState, useCallback } from 'react';
 import { getLotteryRepository } from '../repository';
 
 interface UseDeliveryActionsReturn {
-  confirmReceipt: (lotteryId: string) => Promise<void>;
+  settle: (lotteryId: string) => Promise<void>;
   claimRefund: (lotteryId: string) => Promise<void>;
   isLoading: boolean;
   error: string | null;
@@ -12,22 +12,22 @@ interface UseDeliveryActionsReturn {
 
 /**
  * Hook for contract delivery/settlement actions
- * - confirmReceipt: Winner confirms they received the prize (triggers settlement)
- * - claimRefund: Non-winners or failed market participants claim their refund
+ * - settle: Settle the market after winners are revealed (LOTTERY: 95% → winner, 5% → ops; RAFFLE: pool → seller)
+ * - claimRefund: Participants claim deposit refund (FAILED: deposit + pool share; COMPLETED: deposit only)
  */
 export function useDeliveryActions(): UseDeliveryActionsReturn {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const confirmReceipt = useCallback(async (lotteryId: string): Promise<void> => {
+  const settle = useCallback(async (lotteryId: string): Promise<void> => {
     setIsLoading(true);
     setError(null);
 
     try {
       const repository = getLotteryRepository();
-      await repository.confirmReceipt(lotteryId);
+      await repository.settle(lotteryId);
     } catch (err) {
-      const message = err instanceof Error ? err.message : '수령 확인에 실패했습니다.';
+      const message = err instanceof Error ? err.message : '정산에 실패했습니다.';
       setError(message);
       throw err;
     } finally {
@@ -52,7 +52,7 @@ export function useDeliveryActions(): UseDeliveryActionsReturn {
   }, []);
 
   return {
-    confirmReceipt,
+    settle,
     claimRefund,
     isLoading,
     error,

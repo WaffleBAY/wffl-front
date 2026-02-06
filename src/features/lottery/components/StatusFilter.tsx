@@ -12,7 +12,6 @@ const STATUS_TABS: Array<{ value: LotteryStatus | 'all'; label: string }> = [
   { value: 'all', label: '전체' },
   { value: LotteryStatus.OPEN, label: '진행중' },
   { value: LotteryStatus.CLOSED, label: '마감' },
-  { value: LotteryStatus.COMMITTED, label: '추첨준비' },
   { value: LotteryStatus.REVEALED, label: '당첨발표' },
   { value: LotteryStatus.COMPLETED, label: '완료' },
   { value: LotteryStatus.FAILED, label: '실패' },

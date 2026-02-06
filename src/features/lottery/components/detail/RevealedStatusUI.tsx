@@ -14,21 +14,21 @@ import type { SettlementStep } from '../../hooks/useContractWrite';
 
 interface RevealedStatusUIProps {
   lottery: Lottery;
-  onConfirmReceipt?: () => void;
-  confirmReceiptStep?: SettlementStep;
+  onSettle?: () => void;
+  settleStep?: SettlementStep;
   onClaimRefund?: () => void;
   claimRefundStep?: SettlementStep;
 }
 
 /**
- * UI for REVEALED status - winner(s) selected, waiting for confirmation
- * Winner can confirm receipt to complete the market
- * Non-winners can claim their deposit refund
+ * UI for REVEALED status - winner(s) selected, waiting for settlement
+ * Anyone can call settle to complete the market
+ * After COMPLETED, participants can claim their deposit refund
  */
 export function RevealedStatusUI({
   lottery,
-  onConfirmReceipt,
-  confirmReceiptStep,
+  onSettle,
+  settleStep,
   onClaimRefund,
   claimRefundStep,
 }: RevealedStatusUIProps) {
@@ -46,7 +46,7 @@ export function RevealedStatusUI({
   const sellerUsername = sellerProfile?.username;
 
   // Loading state checks
-  const isConfirmReceiptProcessing = confirmReceiptStep === 'signing' || confirmReceiptStep === 'confirming';
+  const isSettleProcessing = settleStep === 'signing' || settleStep === 'confirming';
   const isClaimRefundProcessing = claimRefundStep === 'signing' || claimRefundStep === 'confirming';
 
   return (
@@ -96,7 +96,6 @@ export function RevealedStatusUI({
 
           <p className="text-sm text-green-600">
             판매자에게 연락하여 경품 수령 방법을 확인하세요.
-            경품을 받으신 후 아래 버튼을 눌러 수령을 확인해주세요.
           </p>
 
           <div className="flex gap-2">
@@ -113,46 +112,31 @@ export function RevealedStatusUI({
               <MessageCircle className="w-4 h-4 mr-2" />
               판매자 연락
             </Button>
-            <Button
-              className="flex-1 bg-green-600 hover:bg-green-700"
-              onClick={onConfirmReceipt}
-              disabled={confirmReceiptStep !== 'idle' && confirmReceiptStep !== undefined || depositRefunded}
-            >
-              <Check className="w-4 h-4 mr-2" />
-              {isConfirmReceiptProcessing ? '처리 중...' : '수령 확인'}
-            </Button>
           </div>
-
-          <p className="text-xs text-green-500">
-            수령 확인 시 보증금 {lottery.participantDeposit} ETH가 반환됩니다.
-          </p>
         </div>
       )}
 
-      {/* Non-winner refund - hide if already refunded */}
-      {!isWinner && hasEntered && !isSeller && !depositRefunded && (
+      {/* Settlement button - anyone can call settle */}
+      <div className="bg-blue-50 rounded-xl p-4 space-y-3 border border-blue-200">
+        <p className="text-sm text-blue-700">
+          정산을 실행하여 마켓을 완료할 수 있습니다.
+        </p>
+        <Button
+          className="w-full bg-blue-600 hover:bg-blue-700"
+          onClick={onSettle}
+          disabled={settleStep !== 'idle' && settleStep !== undefined}
+        >
+          <Check className="w-4 h-4 mr-2" />
+          {isSettleProcessing ? '처리 중...' : '정산 실행'}
+        </Button>
+      </div>
+
+      {/* Non-winner refund note */}
+      {!isWinner && hasEntered && !isSeller && (
         <div className="bg-slate-50 rounded-xl p-4 space-y-3">
           <p className="text-sm text-slate-600">
             아쉽게도 이번에는 당첨되지 않았습니다.
-            보증금을 환불받으실 수 있습니다.
-          </p>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={onClaimRefund}
-            disabled={claimRefundStep !== 'idle' && claimRefundStep !== undefined}
-          >
-            {isClaimRefundProcessing ? '처리 중...' : `보증금 환불받기 (${lottery.participantDeposit} ETH)`}
-          </Button>
-        </div>
-      )}
-
-      {/* Seller view */}
-      {isSeller && (
-        <div className="bg-blue-50 rounded-xl p-4 space-y-3">
-          <p className="text-sm text-blue-700">
-            당첨자가 수령 확인을 완료하면 상금이 정산됩니다.
-            당첨자에게 연락하여 경품 배송을 진행해주세요.
+            정산 완료 후 보증금을 환불받으실 수 있습니다.
           </p>
         </div>
       )}

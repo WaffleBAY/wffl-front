@@ -1,17 +1,16 @@
 import { LotteryStatus, MarketType } from '../types/LotteryStatus'
 
 /**
- * Maps contract MarketStatus (uint8 0-6) to frontend LotteryStatus enum
- * Contract: WaffleLib.MarketStatus
+ * Maps contract MarketStatus (uint8 0-5) to frontend LotteryStatus enum
+ * Contract: WaffleLib.MarketStatus (COMMITTED removed)
  */
 export const MARKET_STATUS_MAP: Record<number, LotteryStatus> = {
   0: LotteryStatus.CREATED,
   1: LotteryStatus.OPEN,
   2: LotteryStatus.CLOSED,
-  3: LotteryStatus.COMMITTED,
-  4: LotteryStatus.REVEALED,
-  5: LotteryStatus.COMPLETED,
-  6: LotteryStatus.FAILED,
+  3: LotteryStatus.REVEALED,
+  4: LotteryStatus.COMPLETED,
+  5: LotteryStatus.FAILED,
 }
 
 export function mapContractStatus(statusNum: number): LotteryStatus {

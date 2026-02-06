@@ -90,7 +90,6 @@ describe('Entry Flow - Eligibility Checks', () => {
     const statuses = [
       LotteryStatus.CREATED,
       LotteryStatus.CLOSED,
-      LotteryStatus.COMMITTED,
       LotteryStatus.REVEALED,
       LotteryStatus.COMPLETED,
       LotteryStatus.FAILED,

@@ -98,7 +98,7 @@ function mapEntryLotteryToFrontend(dto: BackendEntryLotteryDto): Lottery {
     CREATED: LotteryStatus.CREATED,
     OPEN: LotteryStatus.OPEN,
     CLOSED: LotteryStatus.CLOSED,
-    COMMITTED: LotteryStatus.COMMITTED,
+
     REVEALED: LotteryStatus.REVEALED,
     COMPLETED: LotteryStatus.COMPLETED,
     FAILED: LotteryStatus.FAILED,
@@ -153,7 +153,7 @@ function mapBackendToFrontend(dto: BackendLotteryDto): Lottery {
     CREATED: LotteryStatus.CREATED,
     OPEN: LotteryStatus.OPEN,
     CLOSED: LotteryStatus.CLOSED,
-    COMMITTED: LotteryStatus.COMMITTED,
+
     REVEALED: LotteryStatus.REVEALED,
     COMPLETED: LotteryStatus.COMPLETED,
     FAILED: LotteryStatus.FAILED,
@@ -431,9 +431,9 @@ export class RealLotteryRepository implements ILotteryRepository {
     await apiClient.post(`/lotteries/${lotteryId}/entries`, {});
   }
 
-  async confirmReceipt(_lotteryId: string): Promise<void> {
+  async settle(_lotteryId: string): Promise<void> {
     // This will be a contract call in wagmi integration phase
-    throw new Error('confirmReceipt requires contract integration');
+    throw new Error('settle requires contract integration');
   }
 
   async claimRefund(_lotteryId: string): Promise<void> {

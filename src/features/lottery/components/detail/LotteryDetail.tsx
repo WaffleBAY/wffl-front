@@ -10,7 +10,7 @@ import { useAuthStore } from '@/features/auth';
 import { useUserRole } from '../../hooks/useUserRole';
 import { useCelebrationStore } from '../../store/useCelebrationStore';
 import { formatEther } from 'viem';
-import { useOpenMarket, useConfirmReceipt, useClaimRefund } from '../../hooks/useContractWrite';
+import { useOpenMarket, useSettle, useClaimRefund } from '../../hooks/useContractWrite';
 import { PARTICIPANT_DEPOSIT } from '@/config/contracts';
 import { LotteryHeader } from './LotteryHeader';
 import { LotteryInfo } from './LotteryInfo';
@@ -59,28 +59,28 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
     handleOpenMarket();
   };
 
-  // ConfirmReceipt hook for winner action
+  // Settle hook for settlement after REVEALED
   const {
-    confirm,
-    reset: resetConfirmReceipt,
-    step: confirmReceiptStep,
-    isConfirmed: isConfirmReceiptConfirmed,
-    error: confirmReceiptError,
-    canConfirm,
-  } = useConfirmReceipt(lottery.contractAddress as Address | undefined);
+    settle,
+    reset: resetSettle,
+    step: settleStep,
+    isConfirmed: isSettleConfirmed,
+    error: settleError,
+    canSettle,
+  } = useSettle(lottery.contractAddress as Address | undefined);
 
-  const handleConfirmReceipt = () => {
-    if (canConfirm) confirm();
+  const handleSettle = () => {
+    if (canSettle) settle();
   };
 
-  const handleConfirmReceiptResultClose = () => {
-    resetConfirmReceipt();
-    if (isConfirmReceiptConfirmed) router.refresh();
+  const handleSettleResultClose = () => {
+    resetSettle();
+    if (isSettleConfirmed) router.refresh();
   };
 
-  const handleConfirmReceiptRetry = () => {
-    resetConfirmReceipt();
-    handleConfirmReceipt();
+  const handleSettleRetry = () => {
+    resetSettle();
+    handleSettle();
   };
 
   // ClaimRefund hook for participant refund
@@ -108,14 +108,14 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
   };
 
   // Calculate refund amount for dialog based on status
-  // FAILED: ticketPrice + participantDeposit
-  // REVEALED (loser): participantDeposit only
+  // FAILED: ticketPrice + participantDeposit (pool share)
+  // COMPLETED: participantDeposit only
   const getRefundAmountForDialog = () => {
     if (lottery.status === LotteryStatus.FAILED) {
       const totalRefund = BigInt(lottery.ticketPrice) + PARTICIPANT_DEPOSIT;
       return formatEther(totalRefund) + ' ETH';
     }
-    // REVEALED status (loser deposit refund)
+    // COMPLETED status (deposit refund)
     return formatEther(PARTICIPANT_DEPOSIT) + ' ETH';
   };
 
@@ -190,8 +190,8 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
           hasEntered={hasEntered}
           onOpenMarket={handleOpenMarket}
           openMarketStep={openMarketStep}
-          onConfirmReceipt={handleConfirmReceipt}
-          confirmReceiptStep={confirmReceiptStep}
+          onSettle={handleSettle}
+          settleStep={settleStep}
           onClaimRefund={handleClaimRefund}
           claimRefundStep={claimRefundStep}
         />
@@ -206,15 +206,15 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
         onRetry={handleOpenMarketRetry}
       />
 
-      {/* ConfirmReceipt result dialog */}
+      {/* Settle result dialog */}
       <SettlementResultDialog
-        action="confirmReceipt"
-        isSuccess={confirmReceiptStep === 'success'}
-        isError={confirmReceiptStep === 'error'}
-        errorMessage={confirmReceiptError}
+        action="settle"
+        isSuccess={settleStep === 'success'}
+        isError={settleStep === 'error'}
+        errorMessage={settleError}
         refundAmount={formatEther(PARTICIPANT_DEPOSIT) + ' ETH'}
-        onClose={handleConfirmReceiptResultClose}
-        onRetry={handleConfirmReceiptRetry}
+        onClose={handleSettleResultClose}
+        onRetry={handleSettleRetry}
       />
 
       {/* ClaimRefund result dialog */}

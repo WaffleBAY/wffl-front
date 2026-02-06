@@ -21,7 +21,7 @@ export interface Lottery {
   // Economic model (all in ETH/WLD)
   ticketPrice: string;               // Entry price per ticket (bigint as string)
   participantDeposit: string;        // Fixed 0.005 ETH per participant
-  sellerDeposit: string;             // RAFFLE: 15% of goalAmount, LOTTERY: 0
+  sellerDeposit: string;             // 15% of goalAmount (both LOTTERY and RAFFLE)
   prizePool: string;                 // 95% of ticket sales accumulated
 
   // Conditions
@@ -41,8 +41,10 @@ export interface Lottery {
 
   // Randomness (for verification)
   snapshotBlock?: number;            // Block number for randomness
-  commitment?: string;               // hash(secret + nonce)
-  nonce?: number;                    // Additional entropy
+  commitment?: string;               // hash(sellerNullifierHash + contractAddress)
+  sellerNullifierHash?: string;      // Seller's World ID nullifier hash
+  secretRevealed?: boolean;          // Whether seller has revealed the secret
+  snapshotPrevrandao?: string;       // Prevrandao at snapshot block
 
   // Shipping regions (off-chain metadata)
   shippingRegions: string[];         // ISO 3166-1 alpha-2 or 'WORLDWIDE'
@@ -52,7 +54,7 @@ export interface Lottery {
   openedAt?: string;                 // When seller called openMarket
   closedAt?: string;                 // When entries closed
   revealedAt?: string;               // When winner was selected
-  completedAt?: string;              // When winner confirmed receipt
+  completedAt?: string;              // When settle was called
 }
 
 /**

@@ -3,7 +3,7 @@ export { LotteryStatusUI } from './LotteryStatusUI';
 export { CreatedStatusUI } from './CreatedStatusUI';
 export { OpenStatusUI } from './OpenStatusUI';
 export { ClosedStatusUI } from './ClosedStatusUI';
-export { CommittedStatusUI } from './CommittedStatusUI';
+
 export { RevealedStatusUI } from './RevealedStatusUI';
 export { CompletedStatusUI } from './CompletedStatusUI';
 export { FailedStatusUI } from './FailedStatusUI';
