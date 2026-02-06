@@ -1,10 +1,12 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
+import { ImageOff } from 'lucide-react';
 import { Lottery, MarketType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
 import { formatWLD, getStatusBadgeVariant, getStatusLabel } from '../utils/formatters';
@@ -14,6 +16,7 @@ interface LotteryCardProps {
 }
 
 export function LotteryCard({ lottery }: LotteryCardProps) {
+  const [imgError, setImgError] = useState(false);
   const isRaffle = lottery.marketType === MarketType.RAFFLE;
 
   // For LOTTERY: progress based on prizePool vs goalAmount
@@ -31,14 +34,21 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
     <Link href={`/lottery/${lottery.id}`}>
       <Card className="overflow-hidden hover:shadow-md transition-shadow">
         {/* Image with 16:9 aspect ratio - prevents layout shift */}
-        <div className="relative aspect-[16/9] w-full">
-          <Image
-            src={lottery.imageUrl}
-            alt={lottery.title}
-            fill
-            className="object-cover"
-            sizes="(max-width: 768px) 100vw, 50vw"
-          />
+        <div className="relative aspect-[16/9] w-full bg-muted">
+          {!imgError && lottery.imageUrl ? (
+            <Image
+              src={lottery.imageUrl}
+              alt={lottery.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 768px) 100vw, 50vw"
+              onError={() => setImgError(true)}
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center">
+              <ImageOff className="h-8 w-8 text-muted-foreground/40" />
+            </div>
+          )}
           <div className="absolute top-2 right-2 flex gap-1">
             <Badge variant="outline" className="bg-white/80 text-xs">
               {isRaffle ? '래플' : '복권'}

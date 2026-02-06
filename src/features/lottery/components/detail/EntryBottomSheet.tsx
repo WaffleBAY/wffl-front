@@ -100,7 +100,7 @@ export function EntryBottomSheet({
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                티켓 가격 + 보증금 5 WLD
+                티켓 가격 + 보증금 (응모금액의 5%)
               </p>
             </div>
 

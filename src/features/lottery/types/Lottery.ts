@@ -20,7 +20,7 @@ export interface Lottery {
 
   // Economic model (all in WLD)
   ticketPrice: string;               // Entry price per ticket (bigint as string)
-  participantDeposit: string;        // Fixed 5 WLD per participant
+  participantDeposit: string;        // 5% of ticketPrice
   sellerDeposit: string;             // 15% of goalAmount (both LOTTERY and RAFFLE)
   prizePool: string;                 // 95% of ticket sales accumulated
 

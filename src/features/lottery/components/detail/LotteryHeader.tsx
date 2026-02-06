@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, ImageOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Lottery } from '../../types';
 import { getStatusBadgeVariant, getStatusLabel } from '../../utils/formatters';
@@ -13,17 +14,25 @@ interface LotteryHeaderProps {
 
 export function LotteryHeader({ lottery }: LotteryHeaderProps) {
   const router = useRouter();
+  const [imgError, setImgError] = useState(false);
 
   return (
-    <div className="relative aspect-[16/9] w-full">
-      <Image
-        src={lottery.imageUrl}
-        alt={lottery.title}
-        fill
-        className="object-cover"
-        sizes="100vw"
-        priority
-      />
+    <div className="relative aspect-[16/9] w-full bg-muted">
+      {!imgError && lottery.imageUrl ? (
+        <Image
+          src={lottery.imageUrl}
+          alt={lottery.title}
+          fill
+          className="object-cover"
+          sizes="100vw"
+          priority
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <ImageOff className="h-12 w-12 text-muted-foreground/40" />
+        </div>
+      )}
 
       {/* Back button */}
       <button
