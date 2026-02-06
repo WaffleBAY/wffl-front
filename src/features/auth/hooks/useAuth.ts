@@ -3,7 +3,7 @@
 import { useState, useCallback } from 'react';
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
 import { useAuthStore } from '../store/useAuthStore';
-import { getNonce, verifySiwe } from '@/lib/api/auth';
+import { verifySiwe } from '@/lib/api/auth';
 
 interface UseAuthReturn {
   isLoading: boolean;
@@ -36,53 +36,46 @@ export function useAuth(): UseAuthReturn {
         throw new Error('World App에서 열어주세요');
       }
 
-      setDebugStep('Nonce 요청 중...');
+      // Generate nonce client-side (like HAVO reference)
+      const nonce = crypto.randomUUID().replace(/-/g, '');
 
-      // Step 1: Get nonce from backend (not client-side)
-      const nonce = await getNonce();
+      setDebugStep('walletAuth 호출 중...');
 
-      setDebugStep('MiniKit walletAuth 호출 중...');
-
-      // Step 2: Request wallet auth from MiniKit with backend nonce
-      // Add timeout to detect if walletAuth hangs
-      const walletAuthPromise = MiniKit.commandsAsync.walletAuth({
+      // Call walletAuth (HAVO style - simple params)
+      const result = await MiniKit.commandsAsync.walletAuth({
         nonce,
-        requestId: '0',
-        expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        notBefore: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
-        statement: 'World Lottery 앱에 로그인합니다',
+        expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        statement: 'Sign in to World Lottery',
       });
 
-      const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error('walletAuth 응답 시간 초과 (30초)')), 30000);
-      });
+      setDebugStep(`응답: ${result.finalPayload.status}`);
 
-      const { finalPayload } = await Promise.race([walletAuthPromise, timeoutPromise]);
-
-      setDebugStep(`walletAuth 응답: ${finalPayload.status}`);
-
-      if (finalPayload.status === 'error') {
-        const errorCode = (finalPayload as { error_code?: string }).error_code;
+      if (result.finalPayload.status === 'error') {
+        const errorCode = (result.finalPayload as { error_code?: string }).error_code;
         switch (errorCode) {
           case 'user_rejected':
             throw new Error('지갑 연결이 취소되었습니다');
           default:
-            throw new Error('지갑 연결에 실패했습니다');
+            throw new Error(`지갑 연결 실패: ${errorCode || 'unknown'}`);
         }
       }
 
-      // Step 3: Verify SIWE payload with backend and get JWT tokens
-      const { accessToken, refreshToken } = await verifySiwe(finalPayload, nonce);
+      const { address } = result.finalPayload;
 
-      // Step 4: Store tokens in auth store
+      setDebugStep('서버 인증 중...');
+
+      // Verify with backend and get JWT tokens
+      const { accessToken, refreshToken } = await verifySiwe(result.finalPayload, nonce);
+
+      // Store tokens and wallet address
       setTokens(accessToken, refreshToken);
+      setWalletConnected(address);
 
-      // Step 5: Store wallet address
-      setWalletConnected(finalPayload.address);
+      setDebugStep('완료!');
     } catch (err) {
       const message = err instanceof Error ? err.message : '지갑 연결에 실패했습니다';
       setError(message);
-      throw err;
+      setDebugStep(`에러: ${message}`);
     } finally {
       setIsLoading(false);
     }
@@ -98,12 +91,11 @@ export function useAuth(): UseAuthReturn {
       }
 
       const { finalPayload } = await MiniKit.commandsAsync.verify({
-        action: 'lottery-verification', // Must match Developer Portal action
+        action: 'lottery-verification',
         verification_level: VerificationLevel.Orb,
       });
 
       if (finalPayload.status === 'error') {
-        // Handle specific error codes
         const errorCode = (finalPayload as { error_code?: string }).error_code;
         switch (errorCode) {
           case 'user_rejected':
@@ -119,7 +111,6 @@ export function useAuth(): UseAuthReturn {
         }
       }
 
-      // Success - mark as verified
       setWorldIdVerified();
     } catch (err) {
       const message = err instanceof Error ? err.message : 'WorldID 인증에 실패했습니다';
