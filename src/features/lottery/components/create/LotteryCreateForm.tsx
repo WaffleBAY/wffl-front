@@ -14,6 +14,7 @@ import { ImageUpload } from './ImageUpload';
 import { DepositGuide } from './DepositGuide';
 import { MarketTypeSelector } from './MarketTypeSelector';
 import { RegionMultiSelect } from '@/features/region';
+import { cn } from '@/lib/utils';
 
 interface LotteryCreateFormProps {
   onPreview?: (data: Partial<LotteryCreateFormData>, previewUrl: string | null) => void;
