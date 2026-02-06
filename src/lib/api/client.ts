@@ -1,10 +1,15 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 
-// Use NEXT_PUBLIC_API_URL for both server and client
-// This env var is inlined at build time by Next.js
+// Client-side: use /api/proxy (relative, goes through Next.js proxy route)
+// Server-side (SSR): use BACKEND_URL directly (relative URLs don't work on server)
 const getBaseURL = () => {
-  return process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  if (typeof window === 'undefined') {
+    // Server-side: use backend URL directly
+    return process.env.BACKEND_URL || 'http://localhost:3001';
+  }
+  // Client-side: use proxy
+  return process.env.NEXT_PUBLIC_API_URL || '/api/proxy';
 };
 
 const apiClient = axios.create({
