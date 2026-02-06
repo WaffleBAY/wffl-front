@@ -4,10 +4,9 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { MiniKit } from '@worldcoin/minikit-js';
-import { parseEventLogs, type Address, type Hex, createPublicClient, http, parseAbiItem } from 'viem';
+import { parseEventLogs, type Address, createPublicClient, http } from 'viem';
 import { waffleFactoryAbi } from '@/contracts/generated';
 import { getWaffleFactoryAddress, CHAIN_ID } from '@/config/contracts';
-import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { worldChainSepolia } from '@/config/wagmi';
 import { getLotteryRepository } from '../repository';
 import { uploadImage } from '@/lib/api/uploads';
@@ -85,48 +84,53 @@ export function useCreateLottery(): UseCreateLotteryReturn {
     imageUrl: string;
   } | null>(null);
 
-  // Fallback: query recent MarketCreated events from factory to find market address
-  const findMarketFromLogs = useCallback(async (): Promise<Address | null> => {
-    try {
-      const walletAddress = useAuthStore.getState().walletAddress;
-      if (!walletAddress) return null;
+  // Step 1: Poll World Developer API to convert transaction_id → real on-chain hash
+  const pollTransactionHash = useCallback(async (transactionId: string): Promise<`0x${string}`> => {
+    const appId = process.env.NEXT_PUBLIC_APP_ID;
+    if (!appId) throw new Error('APP_ID가 설정되지 않았습니다');
 
-      const contractAddr = getWaffleFactoryAddress(CHAIN_ID);
-      const currentBlock = await publicClient.getBlockNumber();
-      // Look back ~500 blocks (~15 min on World Chain)
-      const fromBlock = currentBlock > BigInt(500) ? currentBlock - BigInt(500) : BigInt(0);
+    for (let i = 0; i < 30; i++) {
+      const res = await fetch(
+        `https://developer.worldcoin.org/api/v2/minikit/transaction/${transactionId}?app_id=${appId}&type=transaction`
+      );
 
-      const logs = await publicClient.getLogs({
-        address: contractAddr,
-        event: parseAbiItem('event MarketCreated(uint256 indexed marketId, address indexed marketAddress, address indexed seller, uint8 mType)'),
-        args: {
-          seller: walletAddress as Address,
-        },
-        fromBlock,
-        toBlock: 'latest',
-      });
-
-      if (logs.length > 0) {
-        const latest = logs[logs.length - 1];
-        return latest.args.marketAddress as Address;
+      if (!res.ok) {
+        toast.info(`API 응답 대기 중... (${i + 1}/30)`);
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
       }
-      return null;
-    } catch (e) {
-      console.error('Fallback log query failed:', e);
-      return null;
+
+      const data = await res.json();
+
+      if (data.transactionStatus === 'failed') {
+        throw new Error('트랜잭션이 실패했습니다');
+      }
+
+      if (data.transactionHash) {
+        return data.transactionHash as `0x${string}`;
+      }
+
+      // Hash not available yet (still pending in relayer)
+      await new Promise((r) => setTimeout(r, 2000));
     }
+
+    throw new Error('트랜잭션 해시를 가져오는데 시간이 초과되었습니다');
   }, []);
 
-  // Poll for transaction receipt and extract market address
-  const waitForReceipt = useCallback(async (hash: `0x${string}`): Promise<Address | null> => {
-    // Try 1: waitForTransactionReceipt with shorter timeout
+  // Step 2: Get receipt with real on-chain hash and extract market address
+  const waitForReceipt = useCallback(async (transactionId: string): Promise<Address | null> => {
     try {
-      toast.info(`TX: ${hash.slice(0, 10)}...${hash.slice(-6)}`);
+      // Convert relayer transaction_id → real on-chain hash
+      toast.info('트랜잭션 해시 확인 중...');
+      const realHash = await pollTransactionHash(transactionId);
+      setTxHash(realHash);
+      toast.info(`TX: ${realHash.slice(0, 10)}...${realHash.slice(-6)}`);
 
+      // Now get receipt with the real hash
       const receipt = await publicClient.waitForTransactionReceipt({
-        hash,
+        hash: realHash,
         confirmations: 1,
-        timeout: 30_000,        // 30 second timeout
+        timeout: 60_000,
         pollingInterval: 3_000,
       });
 
@@ -135,6 +139,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         return null;
       }
 
+      // Parse MarketCreated event
       const logs = parseEventLogs({
         abi: waffleFactoryAbi,
         eventName: 'MarketCreated',
@@ -144,22 +149,16 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       if (logs.length > 0) {
         return logs[0].args.marketAddress as Address;
       }
+
+      toast.error('MarketCreated 이벤트를 찾을 수 없습니다');
       return null;
-    } catch {
-      // Try 2: Fallback - query event logs directly
-      toast.info('이벤트 로그에서 마켓 주소를 검색합니다...');
-
-      // Poll up to 90 seconds with fallback method
-      for (let i = 0; i < 15; i++) {
-        const addr = await findMarketFromLogs();
-        if (addr) return addr;
-        await new Promise((r) => setTimeout(r, 6_000));
-      }
-
-      toast.error('마켓 주소를 찾을 수 없습니다. 잠시 후 다시 시도해주세요.');
+    } catch (e) {
+      const errMsg = e instanceof Error ? e.message : JSON.stringify(e);
+      toast.error(errMsg);
+      console.error('waitForReceipt error:', e);
       return null;
     }
-  }, [findMarketFromLogs]);
+  }, [pollTransactionHash]);
 
   // Save to backend after getting market address
   const saveToBackend = useCallback(async (marketAddress: Address) => {
@@ -267,14 +266,13 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         throw new Error(`TX 에러: ${errorPayload.error_code || 'unknown'} ${errorPayload.details || JSON.stringify(finalPayload)}`);
       }
 
-      // Get transaction hash from response
-      const hash = (finalPayload as { transaction_id: string }).transaction_id as `0x${string}`;
-      setTxHash(hash);
+      // Get transaction_id (this is a relayer ID, NOT the on-chain hash)
+      const transactionId = (finalPayload as { transaction_id: string }).transaction_id;
       setIsConfirming(true);
       setCurrentStep(STEPS.confirm);
 
-      // Wait for receipt and get market address
-      const marketAddress = await waitForReceipt(hash);
+      // Poll World API for real hash, then get receipt
+      const marketAddress = await waitForReceipt(transactionId);
 
       if (!marketAddress) {
         throw new Error('마켓 주소를 가져올 수 없습니다');
