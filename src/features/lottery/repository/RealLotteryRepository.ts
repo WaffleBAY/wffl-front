@@ -38,6 +38,7 @@ interface BackendLotteryDto {
   region: string | null;
   creator: {
     id: string;
+    walletAddress: string;
     username: string | null;
     profilePictureUrl: string | null;
   };
@@ -71,6 +72,7 @@ interface BackendEntryLotteryDto {
   endTime: string;
   creator: {
     id: string;
+    walletAddress: string;
     username: string | null;
     profilePictureUrl: string | null;
   };
@@ -130,7 +132,7 @@ function mapEntryLotteryToFrontend(dto: BackendEntryLotteryDto): Lottery {
     endTime,
     status: statusMap[dto.status] ?? LotteryStatus.CREATED,
     participantCount: 0, // Not provided in simplified DTO
-    seller: dto.creator.id,
+    seller: dto.creator.walletAddress ?? dto.creator.id,
     winners: [],
     shippingRegions: ['WORLDWIDE'],
     createdAt: '', // Not provided in simplified DTO
@@ -176,7 +178,7 @@ function mapBackendToFrontend(dto: BackendLotteryDto): Lottery {
     endTime,
     status: statusMap[dto.status] ?? LotteryStatus.CREATED,
     participantCount: dto.participantCount ?? dto.entriesCount ?? 0,
-    seller: dto.creator.id,
+    seller: dto.creator.walletAddress ?? dto.creator.id,
     winners: dto.winners ?? [],
     shippingRegions: dto.shippingRegions?.length ? dto.shippingRegions : (dto.region ? [dto.region] : ['WORLDWIDE']),
     createdAt: dto.createdAt,

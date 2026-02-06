@@ -13,12 +13,15 @@ export function ParticipationProgress({ lottery }: ParticipationProgressProps) {
 
   // For LOTTERY: progress based on prizePool vs goalAmount
   // For RAFFLE: progress based on participantCount vs preparedQuantity
+  const goalBigInt = BigInt(lottery.goalAmount);
   const progressPercent = isRaffle
     ? Math.min((lottery.participantCount / lottery.preparedQuantity) * 100, 100)
-    : Math.min(
-        (Number(BigInt(lottery.prizePool)) / Number(BigInt(lottery.goalAmount))) * 100,
-        100
-      );
+    : goalBigInt > BigInt(0)
+      ? Math.min(
+          (Number(BigInt(lottery.prizePool)) / Number(goalBigInt)) * 100,
+          100
+        )
+      : 0;
 
   return (
     <div className="space-y-3 px-4">
