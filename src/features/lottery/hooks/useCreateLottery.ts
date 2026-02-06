@@ -3,8 +3,8 @@
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js';
-import { type Address, decodeAbiParameters } from 'viem';
+import { MiniKit } from '@worldcoin/minikit-js';
+import type { Address } from 'viem';
 import { waffleFactoryAbi } from '@/contracts/generated';
 import { getWaffleFactoryAddress, CHAIN_ID } from '@/config/contracts';
 import { getLotteryRepository } from '../repository';
@@ -14,7 +14,6 @@ import type { LotteryCreateFormData } from '../schemas/lotteryCreateSchema';
 
 export type CreateStep =
   | { id: 'upload'; label: '이미지 업로드'; desc: '상품 이미지를 서버에 업로드하고 있습니다' }
-  | { id: 'verify'; label: '본인 인증'; desc: 'World ID로 본인 인증을 진행합니다. World App에서 인증을 승인해주세요.' }
   | { id: 'sign'; label: '트랜잭션 서명'; desc: '블록체인에 마켓을 등록합니다. World App에서 서명을 승인해주세요.' }
   | { id: 'confirm'; label: '트랜잭션 확인'; desc: '블록체인에서 트랜잭션을 처리하고 있습니다. 최대 2분 정도 소요될 수 있습니다.' }
   | { id: 'save'; label: '마켓 등록'; desc: '마켓 정보를 저장하고 있습니다' }
@@ -22,7 +21,6 @@ export type CreateStep =
 
 const STEPS = {
   upload: { id: 'upload' as const, label: '이미지 업로드' as const, desc: '상품 이미지를 서버에 업로드하고 있습니다' as const },
-  verify: { id: 'verify' as const, label: '본인 인증' as const, desc: 'World ID로 본인 인증을 진행합니다. World App에서 인증을 승인해주세요.' as const },
   sign: { id: 'sign' as const, label: '트랜잭션 서명' as const, desc: '블록체인에 마켓을 등록합니다. World App에서 서명을 승인해주세요.' as const },
   confirm: { id: 'confirm' as const, label: '트랜잭션 확인' as const, desc: '블록체인에서 트랜잭션을 처리하고 있습니다. 최대 2분 정도 소요될 수 있습니다.' as const },
   save: { id: 'save' as const, label: '마켓 등록' as const, desc: '마켓 정보를 저장하고 있습니다' as const },
@@ -212,38 +210,9 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       setCurrentStep(STEPS.upload);
       const imageUrl = await uploadImage(data.imageFile);
 
-      // Step 2: World ID verification
-      setCurrentStep(STEPS.verify);
-      const actionId = process.env.NEXT_PUBLIC_ACTION_ID || 'create-market';
+      // Step 2: Calculate contract params
+      setCurrentStep(STEPS.sign);
 
-      let verifyPayload;
-      try {
-        const verifyResult = await MiniKit.commandsAsync.verify({
-          action: actionId,
-          verification_level: VerificationLevel.Orb,
-        });
-        verifyPayload = verifyResult.finalPayload;
-      } catch (verifyErr) {
-        throw new Error(`World ID 인증 예외: ${verifyErr instanceof Error ? verifyErr.message : JSON.stringify(verifyErr)}`);
-      }
-
-      if (verifyPayload.status === 'error') {
-        throw new Error(`World ID 인증 실패: ${JSON.stringify(verifyPayload)}`);
-      }
-
-      const { merkle_root, nullifier_hash, proof } = verifyPayload as {
-        merkle_root: string;
-        nullifier_hash: string;
-        proof: string;
-      };
-
-      // Decode proof from ABI-encoded bytes to uint256[8]
-      const decodedProof = decodeAbiParameters(
-        [{ type: 'uint256[8]' }],
-        proof as `0x${string}`
-      )[0];
-
-      // Step 3: Calculate contract params
       const now = Date.now();
       const expiresAt = data.expiresAt.getTime();
       const durationSeconds = Math.max(0, Math.floor((expiresAt - now) / 1000));
@@ -251,34 +220,29 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       const ticketPriceWei = BigInt(Math.floor(data.entryPrice * 1e18));
       const goalAmountWei = BigInt(Math.floor(data.targetAmount * 1e18));
 
-      const sellerDeposit = data.marketType === MarketType.RAFFLE
-        ? (goalAmountWei * BigInt(15)) / BigInt(100)
-        : BigInt(0);
-
+      // Contract requires 15% deposit for ALL market types
+      const sellerDeposit = (goalAmountWei * BigInt(15)) / BigInt(100);
       const mTypeNum = data.marketType === MarketType.LOTTERY ? 0 : 1;
 
       pendingDataRef.current = { formData: data, imageUrl };
 
-      // Step 4: Send transaction with World ID proof + market params
-      setIsPending(true);
-      setCurrentStep(STEPS.sign);
-
+      // Step 3: Send transaction
+      // World ID verification is commented out in contract, pass dummy values
       const contractAddr = getWaffleFactoryAddress(CHAIN_ID);
+      const dummyProof = ['0', '0', '0', '0', '0', '0', '0', '0'];
       const txArgs = [
-        merkle_root,
-        nullifier_hash,
-        decodedProof.map((v: bigint) => v.toString()),
+        '0',                           // root (dummy - verification disabled)
+        '0',                           // sellerNullifierHash (dummy)
+        dummyProof,                    // sellerProof uint256[8] (dummy)
         mTypeNum,
         ticketPriceWei.toString(),
         goalAmountWei.toString(),
         data.winnerCount,
         durationSeconds,
       ];
-      const txValue = sellerDeposit > BigInt(0)
-        ? '0x' + sellerDeposit.toString(16)
-        : undefined;
+      const txValue = '0x' + sellerDeposit.toString(16);
 
-      toast.info(`args: ${JSON.stringify(txArgs).slice(0, 120)}`);
+      setIsPending(true);
 
       let finalPayload;
       try {
@@ -289,7 +253,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
               abi: waffleFactoryAbi as readonly object[],
               functionName: 'createMarket',
               args: txArgs,
-              ...(txValue ? { value: txValue } : {}),
+              value: txValue,
             },
           ],
         });
@@ -304,7 +268,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       }
 
       setIsPending(false);
-      toast.info(`payload: ${JSON.stringify(finalPayload).slice(0, 150)}`);
 
       if (finalPayload.status === 'error') {
         throw new Error(`TX 에러: ${JSON.stringify(finalPayload).slice(0, 200)}`);
@@ -315,7 +278,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       setIsConfirming(true);
       setCurrentStep(STEPS.confirm);
 
-      // Poll for real hash + receipt + market address
       const marketAddress = await pollForMarketAddress(transactionId);
 
       if (!marketAddress) {

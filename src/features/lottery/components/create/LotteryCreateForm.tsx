@@ -26,7 +26,7 @@ interface LotteryCreateFormProps {
   onPreview?: (data: Partial<LotteryCreateFormData>, previewUrl: string | null) => void;
 }
 
-const ALL_STEP_IDS = ['upload', 'verify', 'sign', 'confirm', 'save'] as const;
+const ALL_STEP_IDS = ['upload', 'sign', 'confirm', 'save'] as const;
 
 function ProgressOverlay({ step }: { step: NonNullable<CreateStep> }) {
   const currentIdx = ALL_STEP_IDS.indexOf(step.id);
