@@ -24,7 +24,7 @@ interface UseCreateLotteryReturn {
 // Create a public client for reading receipts
 const publicClient = createPublicClient({
   chain: worldChainSepolia,
-  transport: http(),
+  transport: http('https://worldchain-sepolia.g.alchemy.com/public'),
 });
 
 /**
@@ -71,10 +71,21 @@ export function useCreateLottery(): UseCreateLotteryReturn {
   // Poll for transaction receipt and extract market address
   const waitForReceipt = useCallback(async (hash: `0x${string}`): Promise<Address | null> => {
     try {
+      toast.info(`TX hash: ${hash.slice(0, 10)}...${hash.slice(-6)}`);
+
       const receipt = await publicClient.waitForTransactionReceipt({
         hash,
         confirmations: 1,
+        timeout: 120_000,       // 2 minute timeout
+        pollingInterval: 3_000, // poll every 3 seconds
       });
+
+      toast.info(`Receipt status: ${receipt.status}`);
+
+      if (receipt.status === 'reverted') {
+        toast.error('트랜잭션이 revert 되었습니다');
+        return null;
+      }
 
       // Parse MarketCreated event to get market address
       const logs = parseEventLogs({
@@ -84,10 +95,16 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       });
 
       if (logs.length > 0) {
-        return logs[0].args.marketAddress as Address;
+        const addr = logs[0].args.marketAddress as Address;
+        toast.info(`Market address: ${addr}`);
+        return addr;
       }
+
+      toast.error(`MarketCreated 이벤트를 찾을 수 없습니다. logs: ${receipt.logs.length}개`);
       return null;
     } catch (e) {
+      const errMsg = e instanceof Error ? e.message : JSON.stringify(e);
+      toast.error(`Receipt 에러: ${errMsg.slice(0, 100)}`);
       console.error('Failed to get receipt:', e);
       return null;
     }
