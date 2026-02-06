@@ -162,13 +162,23 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
     fetchParticipants();
   }, [lottery.id]);
 
-  // Compute hasEntered for status UI
+  // Compute hasEntered for status UI (prefer on-chain data)
   const hasEntered = useMemo(() => {
-    if (!walletAddress || participantAddresses.length === 0) {
-      return false;
+    if (!walletAddress) return false;
+    // Check on-chain participants first
+    if (contractData.participants && contractData.participants.length > 0) {
+      return contractData.participants.some(
+        (addr) => addr.toLowerCase() === walletAddress.toLowerCase()
+      );
     }
-    return participantAddresses.includes(walletAddress);
-  }, [walletAddress, participantAddresses]);
+    // Fallback to backend data
+    if (participantAddresses.length > 0) {
+      return participantAddresses.some(
+        (addr) => addr.toLowerCase() === walletAddress.toLowerCase()
+      );
+    }
+    return false;
+  }, [walletAddress, participantAddresses, contractData.participants]);
 
   // Determine if celebration should show (derived state)
   const shouldShowCelebration = useMemo(() => {
@@ -205,7 +215,7 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
         <LotteryInfo lottery={lottery} />
 
         {/* Participation progress bar */}
-        <ParticipationProgress lottery={lottery} onChainParticipants={contractData.participants} />
+        <ParticipationProgress lottery={lottery} onChainParticipants={contractData.participants} onChainPrizePool={contractData.prizePool} />
 
         {/* Seller info with WorldID badge */}
         <SellerInfo sellerAddress={lottery.seller} isVerified={true} />

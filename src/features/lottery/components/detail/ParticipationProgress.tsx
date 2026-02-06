@@ -11,19 +11,26 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 interface ParticipationProgressProps {
   lottery: Lottery;
   onChainParticipants?: readonly string[];
+  onChainPrizePool?: bigint;
 }
 
-export function ParticipationProgress({ lottery, onChainParticipants }: ParticipationProgressProps) {
+export function ParticipationProgress({ lottery, onChainParticipants, onChainPrizePool }: ParticipationProgressProps) {
   const [showParticipants, setShowParticipants] = useState(false);
   const { walletAddress, isWalletConnected } = useAuthStore();
   const isRaffle = lottery.marketType === MarketType.RAFFLE;
 
+  // Prefer on-chain data over backend data
+  const participantCount = onChainParticipants?.length ?? lottery.participantCount;
+  const prizePool = onChainPrizePool !== undefined ? onChainPrizePool.toString() : lottery.prizePool;
+
   const goalBigInt = BigInt(lottery.goalAmount);
   const progressPercent = isRaffle
-    ? Math.min((lottery.participantCount / lottery.preparedQuantity) * 100, 100)
+    ? lottery.preparedQuantity > 0
+      ? Math.min((participantCount / lottery.preparedQuantity) * 100, 100)
+      : 0
     : goalBigInt > BigInt(0)
       ? Math.min(
-          (Number(BigInt(lottery.prizePool)) / Number(goalBigInt)) * 100,
+          (Number(BigInt(prizePool)) / Number(goalBigInt)) * 100,
           100
         )
       : 0;
@@ -44,15 +51,15 @@ export function ParticipationProgress({ lottery, onChainParticipants }: Particip
       <div className="flex items-center justify-between text-sm">
         {isRaffle ? (
           <span className="text-muted-foreground">
-            {lottery.participantCount} / {lottery.preparedQuantity}명
+            {participantCount} / {lottery.preparedQuantity}명
           </span>
         ) : (
           <span className="text-muted-foreground">
-            {formatWLD(lottery.prizePool)} / {formatWLD(lottery.goalAmount)} WLD
+            {formatWLD(prizePool)} / {formatWLD(lottery.goalAmount)} WLD
           </span>
         )}
         <span className="font-medium text-foreground">
-          총 {lottery.participantCount}명 참여
+          총 {participantCount}명 참여
         </span>
       </div>
 
