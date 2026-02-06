@@ -208,8 +208,16 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       // Save to backend
       await saveToBackend(marketAddress);
 
-    } catch (error) {
-      const message = error instanceof Error ? error.message : '마켓 생성에 실패했습니다';
+    } catch (error: unknown) {
+      let message = '마켓 생성에 실패했습니다';
+      if (error instanceof Error) {
+        message = error.message;
+      }
+      // Show detailed error for debugging
+      const axiosErr = error as { response?: { status?: number; data?: unknown } };
+      if (axiosErr?.response) {
+        message = `[${axiosErr.response.status}] ${JSON.stringify(axiosErr.response.data)}`;
+      }
       toast.error(message);
       console.error('Create lottery error:', error);
       pendingDataRef.current = null;
