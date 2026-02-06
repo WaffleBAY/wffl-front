@@ -4,9 +4,10 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { MiniKit } from '@worldcoin/minikit-js';
-import { parseEventLogs, type Address, type Hex, createPublicClient, http } from 'viem';
+import { parseEventLogs, type Address, type Hex, createPublicClient, http, parseAbiItem } from 'viem';
 import { waffleFactoryAbi } from '@/contracts/generated';
 import { getWaffleFactoryAddress, CHAIN_ID } from '@/config/contracts';
+import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { worldChainSepolia } from '@/config/wagmi';
 import { getLotteryRepository } from '../repository';
 import { uploadImage } from '@/lib/api/uploads';
@@ -84,26 +85,56 @@ export function useCreateLottery(): UseCreateLotteryReturn {
     imageUrl: string;
   } | null>(null);
 
+  // Fallback: query recent MarketCreated events from factory to find market address
+  const findMarketFromLogs = useCallback(async (): Promise<Address | null> => {
+    try {
+      const walletAddress = useAuthStore.getState().walletAddress;
+      if (!walletAddress) return null;
+
+      const contractAddr = getWaffleFactoryAddress(CHAIN_ID);
+      const currentBlock = await publicClient.getBlockNumber();
+      // Look back ~500 blocks (~15 min on World Chain)
+      const fromBlock = currentBlock > BigInt(500) ? currentBlock - BigInt(500) : BigInt(0);
+
+      const logs = await publicClient.getLogs({
+        address: contractAddr,
+        event: parseAbiItem('event MarketCreated(uint256 indexed marketId, address indexed marketAddress, address indexed seller, uint8 mType)'),
+        args: {
+          seller: walletAddress as Address,
+        },
+        fromBlock,
+        toBlock: 'latest',
+      });
+
+      if (logs.length > 0) {
+        const latest = logs[logs.length - 1];
+        return latest.args.marketAddress as Address;
+      }
+      return null;
+    } catch (e) {
+      console.error('Fallback log query failed:', e);
+      return null;
+    }
+  }, []);
+
   // Poll for transaction receipt and extract market address
   const waitForReceipt = useCallback(async (hash: `0x${string}`): Promise<Address | null> => {
+    // Try 1: waitForTransactionReceipt with shorter timeout
     try {
-      toast.info(`TX hash: ${hash.slice(0, 10)}...${hash.slice(-6)}`);
+      toast.info(`TX: ${hash.slice(0, 10)}...${hash.slice(-6)}`);
 
       const receipt = await publicClient.waitForTransactionReceipt({
         hash,
         confirmations: 1,
-        timeout: 120_000,       // 2 minute timeout
-        pollingInterval: 3_000, // poll every 3 seconds
+        timeout: 30_000,        // 30 second timeout
+        pollingInterval: 3_000,
       });
-
-      toast.info(`Receipt status: ${receipt.status}`);
 
       if (receipt.status === 'reverted') {
         toast.error('트랜잭션이 revert 되었습니다');
         return null;
       }
 
-      // Parse MarketCreated event to get market address
       const logs = parseEventLogs({
         abi: waffleFactoryAbi,
         eventName: 'MarketCreated',
@@ -111,20 +142,24 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       });
 
       if (logs.length > 0) {
-        const addr = logs[0].args.marketAddress as Address;
-        toast.info(`Market address: ${addr}`);
-        return addr;
+        return logs[0].args.marketAddress as Address;
+      }
+      return null;
+    } catch {
+      // Try 2: Fallback - query event logs directly
+      toast.info('이벤트 로그에서 마켓 주소를 검색합니다...');
+
+      // Poll up to 90 seconds with fallback method
+      for (let i = 0; i < 15; i++) {
+        const addr = await findMarketFromLogs();
+        if (addr) return addr;
+        await new Promise((r) => setTimeout(r, 6_000));
       }
 
-      toast.error(`MarketCreated 이벤트를 찾을 수 없습니다. logs: ${receipt.logs.length}개`);
-      return null;
-    } catch (e) {
-      const errMsg = e instanceof Error ? e.message : JSON.stringify(e);
-      toast.error(`Receipt 에러: ${errMsg.slice(0, 100)}`);
-      console.error('Failed to get receipt:', e);
+      toast.error('마켓 주소를 찾을 수 없습니다. 잠시 후 다시 시도해주세요.');
       return null;
     }
-  }, []);
+  }, [findMarketFromLogs]);
 
   // Save to backend after getting market address
   const saveToBackend = useCallback(async (marketAddress: Address) => {
