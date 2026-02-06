@@ -42,10 +42,9 @@ export async function uploadImage(file: File): Promise<string> {
       formData,
       {
         headers: {
-          'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`,
         },
-        timeout: 120000, // 120s timeout for image upload
+        timeout: 120000,
       }
     );
     return data.url;
@@ -76,7 +75,6 @@ export async function uploadImage(file: File): Promise<string> {
         retryFormData,
         {
           headers: {
-            'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${token}`,
           },
           timeout: 120000,
