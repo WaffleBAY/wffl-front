@@ -44,11 +44,20 @@ export function useAuth(): UseAuthReturn {
       setDebugStep('MiniKit walletAuth 호출 중...');
 
       // Step 2: Request wallet auth from MiniKit with backend nonce
-      const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
+      // Add timeout to detect if walletAuth hangs
+      const walletAuthPromise = MiniKit.commandsAsync.walletAuth({
         nonce,
-        statement: 'World Lottery 앱에 로그인합니다',
+        requestId: '0',
         expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        notBefore: new Date(Date.now() - 24 * 60 * 60 * 1000), // 1 day ago
+        statement: 'World Lottery 앱에 로그인합니다',
       });
+
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('walletAuth 응답 시간 초과 (30초)')), 30000);
+      });
+
+      const { finalPayload } = await Promise.race([walletAuthPromise, timeoutPromise]);
 
       setDebugStep(`walletAuth 응답: ${finalPayload.status}`);
 
