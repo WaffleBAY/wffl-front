@@ -42,6 +42,11 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { transactionId, txHash: clientTxHash } = body;
 
+    console.log('[tx-status] body:', JSON.stringify(body));
+    console.log('[tx-status] transactionId:', transactionId, 'clientTxHash:', clientTxHash);
+    console.log('[tx-status] APP_ID:', process.env.NEXT_PUBLIC_APP_ID);
+    console.log('[tx-status] FACTORY:', process.env.NEXT_PUBLIC_WAFFLE_FACTORY_ADDRESS);
+
     if (!transactionId && !clientTxHash) {
       return NextResponse.json({ error: 'transactionId or txHash required' }, { status: 400 });
     }
@@ -84,6 +89,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get receipt
+    console.log('[tx-status] waiting for receipt, txHash:', txHash);
     try {
       const receipt = await publicClient.waitForTransactionReceipt({
         hash: txHash,
@@ -91,7 +97,10 @@ export async function POST(req: NextRequest) {
         timeout: 15_000,
       });
 
+      console.log('[tx-status] receipt status:', receipt.status, 'logs:', receipt.logs.length, 'gasUsed:', receipt.gasUsed.toString());
+
       if (receipt.status === 'reverted') {
+        console.log('[tx-status] TX REVERTED! gasUsed:', receipt.gasUsed.toString());
         return NextResponse.json({
           status: 'reverted',
           txHash,
@@ -116,8 +125,8 @@ export async function POST(req: NextRequest) {
             marketAddress,
           });
         }
-      } catch {
-        // parseEventLogs failed, try fallback
+      } catch (parseErr) {
+        console.log('[tx-status] parseEventLogs failed:', parseErr instanceof Error ? parseErr.message : parseErr);
       }
 
       // Fallback: extract market address from raw log topics
@@ -128,6 +137,7 @@ export async function POST(req: NextRequest) {
       const fallbackAddress = extractMarketAddressFromRawLogs(rawLogs);
 
       if (fallbackAddress) {
+        console.log('[tx-status] fallback parsed marketAddress:', fallbackAddress);
         return NextResponse.json({
           status: 'success',
           txHash,
@@ -137,6 +147,7 @@ export async function POST(req: NextRequest) {
       }
 
       // No MarketCreated event found at all
+      console.log('[tx-status] NO MarketCreated event! rawLogs:', JSON.stringify(rawLogs));
       return NextResponse.json({
         status: 'success_no_event',
         txHash,
@@ -146,6 +157,7 @@ export async function POST(req: NextRequest) {
         rawTopics: receipt.logs.map(l => l.topics),
       });
     } catch (receiptErr) {
+      console.log('[tx-status] receipt error:', receiptErr instanceof Error ? receiptErr.message : receiptErr);
       return NextResponse.json({
         status: 'mining',
         txHash,
