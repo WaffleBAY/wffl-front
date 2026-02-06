@@ -27,19 +27,27 @@ export function useAuth(): UseAuthReturn {
     setError(null);
 
     try {
+      console.log('[Auth] Starting wallet connection...');
+      console.log('[Auth] API_URL:', process.env.NEXT_PUBLIC_API_URL);
+
       if (!MiniKit.isInstalled()) {
         throw new Error('World App에서 열어주세요');
       }
+      console.log('[Auth] MiniKit is installed');
 
       // Step 1: Get nonce from backend (not client-side)
+      console.log('[Auth] Getting nonce...');
       const nonce = await getNonce();
+      console.log('[Auth] Got nonce:', nonce);
 
       // Step 2: Request wallet auth from MiniKit with backend nonce
+      console.log('[Auth] Requesting wallet auth...');
       const { finalPayload } = await MiniKit.commandsAsync.walletAuth({
         nonce,
         statement: 'World Lottery 앱에 로그인합니다',
         expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       });
+      console.log('[Auth] Wallet auth response:', finalPayload.status);
 
       if (finalPayload.status === 'error') {
         const errorCode = (finalPayload as { error_code?: string }).error_code;
