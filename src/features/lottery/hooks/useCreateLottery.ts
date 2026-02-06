@@ -239,6 +239,8 @@ export function useCreateLottery(): UseCreateLotteryReturn {
 
       // Permit2 deadline: 1 hour from now
       const permitDeadline = Math.floor(Date.now() / 1000) + 3600;
+      // Permit2 nonce: use timestamp to ensure uniqueness (each nonce can only be used once)
+      const permitNonce = Date.now();
 
       const txArgs = [
         '0',                           // root (dummy - verification disabled)
@@ -250,7 +252,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         data.winnerCount.toString(),   // preparedQuantity (uint256)
         durationSeconds.toString(),    // duration (uint256)
         sellerDeposit.toString(),      // _permitAmount (uint256)
-        '0',                           // _permitNonce (uint256) - Permit2 handles nonce
+        permitNonce.toString(),        // _permitNonce (uint256)
         permitDeadline.toString(),     // _permitDeadline (uint256)
         'PERMIT2_SIGNATURE_PLACEHOLDER_0', // _permitSignature (bytes) - MiniKit fills this
       ];
@@ -275,7 +277,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
                 amount: sellerDeposit.toString(),
               },
               spender: contractAddr,
-              nonce: '0',
+              nonce: permitNonce.toString(),
               deadline: permitDeadline.toString(),
             },
           ],
