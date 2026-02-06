@@ -190,17 +190,29 @@ export function useEnterMarket(marketAddress: Address | undefined, ticketPriceWe
   const [hash, setHash] = useState<`0x${string}` | undefined>()
   const [error, setError] = useState<string | null>(null)
 
-  // Calculate required value from passed ticketPrice
+  // Calculate required value: ticketPrice + fixed 5 WLD deposit
   const requiredValue = useMemo(() => {
-    if (!ticketPriceWei || ticketPriceWei === '0') return undefined
-    return BigInt(ticketPriceWei) + PARTICIPANT_DEPOSIT
+    try {
+      return BigInt(ticketPriceWei || '0') + PARTICIPANT_DEPOSIT
+    } catch {
+      return PARTICIPANT_DEPOSIT
+    }
   }, [ticketPriceWei])
 
   /**
    * Single-step entry: WorldID verification → sendTransaction in one go.
    */
   const enterMarket = useCallback(async (lotteryId: string) => {
-    if (!marketAddress || !requiredValue) return
+    if (!marketAddress) {
+      setError('컨트랙트 주소가 없습니다')
+      setStep('error')
+      return
+    }
+    if (requiredValue === undefined) {
+      setError('응모 금액을 계산할 수 없습니다')
+      setStep('error')
+      return
+    }
 
     setStep('verifying')
     setError(null)

@@ -97,7 +97,7 @@ export function EntryBottomSheet({
                 </span>
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                티켓 가격 + 보증금 (5 WLD)
+                티켓 가격 + 참가 보증금
               </p>
             </div>
 

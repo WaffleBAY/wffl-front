@@ -69,7 +69,7 @@ export function LotteryInfo({ lottery }: LotteryInfoProps) {
 
         <div className="border-t pt-2 mt-2">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>참가자 보증금 (응모가격의 5%)</span>
+            <span>참가자 보증금</span>
             <span>{formatWLD(lottery.participantDeposit)} WLD</span>
           </div>
         </div>
