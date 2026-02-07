@@ -149,11 +149,23 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
     return statusMap[statusNum] ?? lottery.status;
   }, [contractData.status, lottery.status]);
 
-  // Create lottery with effective (on-chain) status for child components
+  // Create lottery with effective on-chain data for child components
   const effectiveLottery = useMemo(() => {
-    if (effectiveStatus === lottery.status) return lottery;
-    return { ...lottery, status: effectiveStatus };
-  }, [lottery, effectiveStatus]);
+    const overrides: Partial<Lottery> = {};
+    if (effectiveStatus !== lottery.status) {
+      overrides.status = effectiveStatus;
+    }
+    // Override winners from on-chain if available
+    if (contractData.winners && contractData.winners.length > 0) {
+      overrides.winners = Array.from(contractData.winners);
+    }
+    // Override participantCount from on-chain
+    if (contractData.participants && contractData.participants.length > 0) {
+      overrides.participantCount = contractData.participants.length;
+    }
+    if (Object.keys(overrides).length === 0) return lottery;
+    return { ...lottery, ...overrides };
+  }, [lottery, effectiveStatus, contractData.winners, contractData.participants]);
 
   // Calculate refund amount for dialog based on status
   // FAILED: ticketPrice + participantDeposit (pool share)
