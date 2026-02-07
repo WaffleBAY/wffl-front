@@ -11,7 +11,7 @@ import { useWaitForTransactionReceipt } from 'wagmi'
 import type { BaseError } from 'wagmi'
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js'
 import { CHAIN_ID, PARTICIPANT_DEPOSIT, WLD_TOKEN_ADDRESS, getWaffleFactoryAddress } from '@/config/contracts'
-import { waffleFactoryAbi } from '@/contracts/generated'
+import { waffleFactoryAbi, waffleMarketAbi } from '@/contracts/generated'
 import {
   useWriteWaffleMarketSettle,
   useSimulateWaffleMarketSettle,
@@ -133,22 +133,19 @@ export function useClaimRefund(marketAddress: Address | undefined) {
         throw new Error('World App에서 열어주세요')
       }
 
-      const factoryAddress = getWaffleFactoryAddress(CHAIN_ID)
-
-      // Skip pre-flight simulation: claimRefund checks msg.sender (participant),
-      // but simulateContract without account uses address(0) → always fails.
-      // MiniKit relayer handles the actual tx with the correct sender.
-
-      console.log('[Refund] Sending MiniKit transaction...', { factoryAddress, marketAddress })
+      // Call market's claimRefund() directly (no args, uses msg.sender).
+      // Cannot go through factory because old markets reference a different factory address,
+      // and onlyFactory modifier would reject calls from the current factory.
+      console.log('[Refund] Sending MiniKit transaction directly to market...', { marketAddress })
       let result
       try {
         result = await MiniKit.commandsAsync.sendTransaction({
           transaction: [
             {
-              address: factoryAddress,
-              abi: waffleFactoryAbi as readonly object[],
+              address: marketAddress,
+              abi: waffleMarketAbi as readonly object[],
               functionName: 'claimRefund',
-              args: [marketAddress],
+              args: [],
             },
           ],
         })
