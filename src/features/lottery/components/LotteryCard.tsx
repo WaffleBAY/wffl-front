@@ -20,7 +20,7 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
 
   return (
     <Link href={`/lottery/${lottery.id}`}>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow">
+      <Card className="overflow-hidden hover:shadow-md transition-shadow py-0 gap-0">
         <div className="relative aspect-[16/9] w-full bg-muted">
           {!imgError && lottery.imageUrl ? (
             <Image

@@ -239,6 +239,10 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       const ticketPriceWei = BigInt(Math.floor(data.entryPrice * 1e18));
       const goalAmountWei = BigInt(Math.floor(data.targetAmount * 1e18));
 
+      // On-chain prizePool only accumulates 95% of ticketPrice (5% goes to fees).
+      // Adjust goalAmount so the comparison prizePool >= goalAmount is achievable.
+      const adjustedGoalForContract = (goalAmountWei * BigInt(95)) / BigInt(100);
+
       // Contract requires 15% deposit for ALL market types (in WLD)
       const sellerDeposit = (goalAmountWei * BigInt(15)) / BigInt(100);
       const mTypeNum = data.marketType === MarketType.LOTTERY ? 0 : 1;
@@ -262,7 +266,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         dummyProof,                    // sellerProof uint256[8] (dummy)
         mTypeNum.toString(),           // mType (uint8)
         ticketPriceWei.toString(),     // ticketPrice (uint256)
-        goalAmountWei.toString(),      // goalAmount (uint256)
+        adjustedGoalForContract.toString(), // goalAmount (adjusted for 5% fee)
         data.winnerCount.toString(),   // preparedQuantity (uint256)
         durationSeconds.toString(),    // duration (uint256)
         sellerDeposit.toString(),      // _permitAmount (uint256)
