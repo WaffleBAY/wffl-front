@@ -4,7 +4,6 @@ import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Card, CardContent } from '@/components/ui/card';
-import { Progress } from '@/components/ui/progress';
 import { Badge } from '@/components/ui/badge';
 import { ImageOff } from 'lucide-react';
 import { Lottery, MarketType } from '../types';
@@ -19,21 +18,9 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
   const [imgError, setImgError] = useState(false);
   const isRaffle = lottery.marketType === MarketType.RAFFLE;
 
-  // For LOTTERY: progress based on prizePool vs goalAmount
-  // For RAFFLE: progress based on participantCount vs preparedQuantity
-  const progressPercent = isRaffle
-    ? Math.min((lottery.participantCount / lottery.preparedQuantity) * 100, 100)
-    : BigInt(lottery.goalAmount) > BigInt(0)
-      ? Math.min(
-          (Number(BigInt(lottery.prizePool)) / Number(BigInt(lottery.goalAmount))) * 100,
-          100
-        )
-      : 0;
-
   return (
     <Link href={`/lottery/${lottery.id}`}>
       <Card className="overflow-hidden hover:shadow-md transition-shadow">
-        {/* Image with 16:9 aspect ratio - prevents layout shift */}
         <div className="relative aspect-[16/9] w-full bg-muted">
           {!imgError && lottery.imageUrl ? (
             <Image
@@ -60,26 +47,14 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
         </div>
 
         <CardContent className="p-4 space-y-3">
-          {/* Title - 2 line clamp */}
           <h3 className="font-semibold text-base line-clamp-2">
             {lottery.title}
           </h3>
 
-          {/* Entry Price */}
           <p className="text-sm text-muted-foreground">
             응모가격: <span className="font-medium text-foreground">{formatWLD(lottery.ticketPrice)} WLD</span>
           </p>
 
-          {/* Progress Bar */}
-          <div className="space-y-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>{lottery.participantCount}명 참여</span>
-              <span>{progressPercent.toFixed(0)}%</span>
-            </div>
-            <Progress value={progressPercent} className="h-2" />
-          </div>
-
-          {/* Countdown Timer */}
           <CountdownTimer endTime={lottery.endTime} />
         </CardContent>
       </Card>
