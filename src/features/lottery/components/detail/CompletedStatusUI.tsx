@@ -49,25 +49,36 @@ function SellerChatSection({ sellerAddress }: { sellerAddress: string }) {
   );
 }
 
-function ChatButton({ address }: { address: string }) {
+function WinnerRow({ address, index, isMe, showChat }: { address: string; index: number; isMe: boolean; showChat: boolean }) {
   const { profile, isLoading } = useUserProfile(address);
   const username = profile?.username;
 
-  if (isLoading) return null;
-  if (!username) return null;
-
   return (
-    <button
-      className="ml-auto shrink-0 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded-md hover:bg-blue-50"
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        window.open(generateWorldChatLink(username), '_blank');
-      }}
-    >
-      <MessageCircle className="w-3.5 h-3.5" />
-      채팅
-    </button>
+    <div className="flex items-center gap-2 bg-white rounded-lg p-3">
+      <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 font-bold text-sm">
+        {index + 1}
+      </div>
+      <span className="text-sm">
+        {isLoading ? abbreviateAddress(address) : username ? `@${username}` : abbreviateAddress(address)}
+      </span>
+      {isMe ? (
+        <span className="ml-auto text-xs bg-yellow-500 text-white px-2 py-1 rounded-full">
+          나
+        </span>
+      ) : showChat && username ? (
+        <button
+          className="ml-auto shrink-0 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded-md hover:bg-blue-50"
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(generateWorldChatLink(username), '_blank');
+          }}
+        >
+          <MessageCircle className="w-3.5 h-3.5" />
+          채팅
+        </button>
+      ) : null}
+    </div>
   );
 }
 
@@ -124,24 +135,13 @@ export function CompletedStatusUI({ lottery, contractData, onClaimRefund, claimR
           </div>
           <div className="space-y-2">
             {winners.map((winner, index) => (
-              <div
+              <WinnerRow
                 key={winner}
-                className="flex items-center gap-2 bg-white rounded-lg p-3"
-              >
-                <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 font-bold text-sm">
-                  {index + 1}
-                </div>
-                <span className="font-mono text-sm">
-                  {abbreviateAddress(winner)}
-                </span>
-                {isWalletConnected && winner.toLowerCase() === walletAddress?.toLowerCase() ? (
-                  <span className="ml-auto text-xs bg-yellow-500 text-white px-2 py-1 rounded-full">
-                    나
-                  </span>
-                ) : isSeller ? (
-                  <ChatButton address={winner} />
-                ) : null}
-              </div>
+                address={winner}
+                index={index}
+                isMe={isWalletConnected && winner.toLowerCase() === walletAddress?.toLowerCase()}
+                showChat={isSeller}
+              />
             ))}
           </div>
           {lottery.marketType === MarketType.RAFFLE && (
