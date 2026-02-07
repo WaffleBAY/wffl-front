@@ -133,19 +133,26 @@ export function useClaimRefund(marketAddress: Address | undefined) {
         throw new Error('World App에서 열어주세요')
       }
 
-      // Call market's claimRefund() directly (no args, uses msg.sender).
-      // Cannot go through factory because old markets reference a different factory address,
-      // and onlyFactory modifier would reject calls from the current factory.
-      console.log('[Refund] Sending MiniKit transaction directly to market...', { marketAddress })
+      // Read the market's actual factory address on-chain.
+      // Old markets may reference a different factory than the current one,
+      // and the market's onlyFactory modifier requires the exact stored factory.
+      const publicClient = createPublicClient({ chain: worldChain, transport: http() })
+      const marketFactory = await publicClient.readContract({
+        address: marketAddress,
+        abi: waffleMarketAbi,
+        functionName: 'factory',
+      }) as Address
+
+      console.log('[Refund] Using market factory:', marketFactory, 'for market:', marketAddress)
       let result
       try {
         result = await MiniKit.commandsAsync.sendTransaction({
           transaction: [
             {
-              address: marketAddress,
-              abi: waffleMarketAbi as readonly object[],
+              address: marketFactory,
+              abi: waffleFactoryAbi as readonly object[],
               functionName: 'claimRefund',
-              args: [],
+              args: [marketAddress],
             },
           ],
         })
