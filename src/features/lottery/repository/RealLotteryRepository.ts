@@ -68,11 +68,13 @@ interface BackendEntryLotteryDto {
   prize: string;
   imageUrl: string | null;
   contractAddress: string | null;
+  marketType?: string;
+  ticketPrice?: string;
   status: string;
   endTime: string;
   creator: {
     id: string;
-    walletAddress: string;
+    walletAddress?: string;
     username: string | null;
     profilePictureUrl: string | null;
   };
@@ -117,25 +119,25 @@ function mapEntryLotteryToFrontend(dto: BackendEntryLotteryDto): Lottery {
 
   return {
     id: dto.id,
-    contractAddress: dto.contractAddress ?? dto.id, // Use contractAddress if available, else ID as placeholder
+    contractAddress: dto.contractAddress ?? dto.id,
     title: dto.title,
     description: dto.description ?? '',
     imageUrl: dto.imageUrl ?? '',
     prizeDescription: dto.prize,
-    marketType: MarketType.LOTTERY,
-    ticketPrice: '0', // Not provided in simplified DTO
+    marketType: dto.marketType === 'RAFFLE' ? MarketType.RAFFLE : MarketType.LOTTERY,
+    ticketPrice: dto.ticketPrice ?? '0',
     participantDeposit: PARTICIPANT_DEPOSIT.toString(),
     sellerDeposit: '0',
-    prizePool: '0', // Not provided in simplified DTO
-    goalAmount: '0', // Not provided in simplified DTO
+    prizePool: '0',
+    goalAmount: '0',
     preparedQuantity: 1,
     endTime,
     status: statusMap[dto.status] ?? LotteryStatus.CREATED,
-    participantCount: 0, // Not provided in simplified DTO
+    participantCount: 0,
     seller: dto.creator.walletAddress ?? dto.creator.id,
     winners: [],
     shippingRegions: ['WORLDWIDE'],
-    createdAt: '', // Not provided in simplified DTO
+    createdAt: '',
   };
 }
 
@@ -356,27 +358,18 @@ export class RealLotteryRepository implements ILotteryRepository {
   }
 
   async getMyLotteries(
-    address: string,
+    _address: string,
     params: PaginationParams
   ): Promise<PaginatedResult<Lottery>> {
-    // Backend doesn't have dedicated endpoint yet
-    // Fetch all and filter client-side
-    const { data } = await apiClient.get<BackendLotteryListResponse>('/lotteries', {
-      params: {
-        page: params.page,
-        limit: params.limit,
-      },
+    const { data } = await apiClient.get<BackendLotteryListResponse>('/users/me/lotteries', {
+      params: { page: params.page, limit: params.limit },
     });
 
-    const myLotteries = data.items
-      .filter((item) => item.creator.id === address)
-      .map(mapBackendToFrontend);
-
     return {
-      items: myLotteries,
-      total: myLotteries.length,
-      page: params.page,
-      totalPages: Math.ceil(myLotteries.length / params.limit),
+      items: data.items.map(mapBackendToFrontend),
+      total: data.pagination.total,
+      page: data.pagination.page,
+      totalPages: data.pagination.totalPages,
     };
   }
 
