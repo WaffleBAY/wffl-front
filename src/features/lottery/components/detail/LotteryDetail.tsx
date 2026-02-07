@@ -122,20 +122,22 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
 
   const handleDrawResultClose = () => {
     resetDraw();
-    if (drawStep === 'success') router.refresh();
+    // Always refresh after draw dialog (success or "already completed" error)
+    router.refresh();
   };
 
   const handleDrawRetry = () => {
     resetDraw();
-    handleDraw();
+    router.refresh();
   };
 
   // On-chain contract data (participants, winners, status)
   const contractData = useLotteryContractData(lottery.contractAddress as Address | undefined);
 
-  // Map on-chain status (number) to LotteryStatus enum, prefer on-chain over backend
+  // Map on-chain status (number/bigint) to LotteryStatus enum, prefer on-chain over backend
   const effectiveStatus = useMemo(() => {
-    if (contractData.status === undefined) return lottery.status;
+    if (contractData.status === undefined || contractData.status === null) return lottery.status;
+    const statusNum = Number(contractData.status); // Handle bigint from wagmi
     const statusMap: Record<number, LotteryStatus> = {
       0: LotteryStatus.CREATED,
       1: LotteryStatus.OPEN,
@@ -144,7 +146,7 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
       4: LotteryStatus.COMPLETED,
       5: LotteryStatus.FAILED,
     };
-    return statusMap[contractData.status] ?? lottery.status;
+    return statusMap[statusNum] ?? lottery.status;
   }, [contractData.status, lottery.status]);
 
   // Create lottery with effective (on-chain) status for child components

@@ -401,6 +401,16 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
       } catch (simError: unknown) {
         const reason = simError instanceof Error ? simError.message : String(simError)
         console.error('[Draw] Simulation failed:', reason)
+        // User-friendly messages for known revert reasons
+        if (reason.includes('Not open')) {
+          throw new Error('이미 추첨이 완료된 마켓입니다. 페이지를 새로고침합니다...')
+        }
+        if (reason.includes('Not expired')) {
+          throw new Error('아직 마감 시간이 지나지 않았습니다.')
+        }
+        if (reason.includes('Not a valid market')) {
+          throw new Error('유효하지 않은 마켓입니다.')
+        }
         throw new Error(`컨트랙트 호출 실패: ${reason.slice(0, 300)}`)
       }
 
