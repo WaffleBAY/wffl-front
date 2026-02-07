@@ -166,14 +166,19 @@ export function useClaimRefund(marketAddress: Address | undefined) {
       }
 
       const { finalPayload: txPayload } = result
-      console.log('[Refund] MiniKit response:', JSON.stringify(txPayload).slice(0, 300))
+      console.log('[Refund] MiniKit response:', JSON.stringify(txPayload))
 
       if (txPayload.status === 'error') {
-        const errorCode = (txPayload as { error_code?: string }).error_code
-        const errorDetail = errorCode === 'user_rejected'
-          ? '사용자가 거부했습니다'
-          : `TX 에러: ${JSON.stringify(txPayload).slice(0, 200)}`
-        throw new Error(errorDetail)
+        const payload = txPayload as { error_code?: string; message?: string; detail?: string }
+        const errorCode = payload.error_code || 'unknown'
+        console.error('[Refund] MiniKit error:', errorCode, JSON.stringify(txPayload))
+
+        const errorMessages: Record<string, string> = {
+          user_rejected: '사용자가 거부했습니다',
+          invalid_contract: `등록되지 않은 컨트랙트입니다.\nDeveloper Portal에 팩토리 주소를 등록해주세요:\n${marketFactory}`,
+          generic_error: `트랜잭션 실패: ${payload.message || payload.detail || '알 수 없는 오류'}`,
+        }
+        throw new Error(errorMessages[errorCode] || `에러 [${errorCode}]: ${JSON.stringify(txPayload).slice(0, 300)}`)
       }
 
       // Poll for confirmation

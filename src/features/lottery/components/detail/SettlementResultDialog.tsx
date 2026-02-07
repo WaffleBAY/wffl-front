@@ -79,12 +79,14 @@ export function SettlementResultDialog({
       <AlertDialogContent>
         <AlertDialogHeader>
           <div className="flex items-center gap-2">
-            <AlertCircle className="h-6 w-6 text-destructive" />
+            <AlertCircle className="h-6 w-6 shrink-0 text-destructive" />
             <AlertDialogTitle>{errorTitle}</AlertDialogTitle>
           </div>
-          <AlertDialogDescription>
-            {errorMessage || '알 수 없는 오류가 발생했습니다.'}
-          </AlertDialogDescription>
+          <div className="mt-2 max-h-40 overflow-y-auto rounded bg-muted/50 p-3">
+            <p className="text-sm text-muted-foreground break-all whitespace-pre-wrap">
+              {errorMessage || '알 수 없는 오류가 발생했습니다.'}
+            </p>
+          </div>
         </AlertDialogHeader>
         <AlertDialogFooter className="flex gap-2">
           <Button variant="outline" onClick={onClose}>
