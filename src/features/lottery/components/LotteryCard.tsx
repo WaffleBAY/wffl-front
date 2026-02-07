@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { ImageOff } from 'lucide-react';
 import { Lottery, MarketType } from '../types';
 import { CountdownTimer } from './CountdownTimer';
-import { formatWLD, getStatusBadgeVariant, getStatusLabel } from '../utils/formatters';
+import { formatWLD } from '../utils/formatters';
 
 interface LotteryCardProps {
   lottery: Lottery;
@@ -36,12 +36,9 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
               <ImageOff className="h-8 w-8 text-muted-foreground/40" />
             </div>
           )}
-          <div className="absolute top-2 right-2 flex gap-1">
+          <div className="absolute top-2 right-2">
             <Badge variant="outline" className="bg-white/80 text-xs">
               {isRaffle ? '래플' : '복권'}
-            </Badge>
-            <Badge variant={getStatusBadgeVariant(lottery.status)}>
-              {getStatusLabel(lottery.status)}
             </Badge>
           </div>
         </div>
