@@ -20,7 +20,7 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
 
   return (
     <Link href={`/lottery/${lottery.id}`}>
-      <Card className="overflow-hidden hover:shadow-md transition-shadow py-0 gap-0">
+      <Card className="overflow-hidden card-neon py-0 gap-0 rounded-xl">
         <div className="relative aspect-[16/9] w-full bg-muted">
           {!imgError && lottery.imageUrl ? (
             <Image
@@ -37,7 +37,7 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
             </div>
           )}
           <div className="absolute top-2 right-2">
-            <Badge variant="outline" className="bg-white/80 text-xs">
+            <Badge variant="outline" className="text-xs">
               {isRaffle ? '래플' : '복권'}
             </Badge>
           </div>

@@ -37,7 +37,7 @@ export function LotteryHeader({ lottery }: LotteryHeaderProps) {
       {/* Back button */}
       <button
         onClick={() => router.back()}
-        className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/80 backdrop-blur-sm shadow-sm transition-colors hover:bg-white"
+        className="absolute left-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm shadow-sm transition-colors hover:bg-black/70 text-white"
         aria-label="뒤로 가기"
       >
         <ChevronLeft className="h-6 w-6" />

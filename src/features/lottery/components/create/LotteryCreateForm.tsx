@@ -27,7 +27,7 @@ function ProgressOverlay({ step }: { step: NonNullable<CreateStep> }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-6">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl">
+      <div className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-xl neon-border">
         {/* Step indicators */}
         <div className="flex items-center justify-between mb-6">
           {ALL_STEP_IDS.map((id, i) => {
@@ -37,16 +37,16 @@ function ProgressOverlay({ step }: { step: NonNullable<CreateStep> }) {
               <div key={id} className="flex items-center flex-1 last:flex-none">
                 <div className={cn(
                   'flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-colors',
-                  done ? 'bg-green-500 text-white' :
-                  active ? 'bg-blue-500 text-white animate-pulse' :
-                  'bg-gray-200 text-gray-400'
+                  done ? 'bg-neon-green text-black' :
+                  active ? 'bg-neon-pink text-white animate-pulse' :
+                  'bg-secondary text-muted-foreground'
                 )}>
                   {done ? '✓' : i + 1}
                 </div>
                 {i < ALL_STEP_IDS.length - 1 && (
                   <div className={cn(
                     'mx-1 h-0.5 flex-1 transition-colors',
-                    i < currentIdx ? 'bg-green-500' : 'bg-gray-200'
+                    i < currentIdx ? 'bg-neon-green' : 'bg-secondary'
                   )} />
                 )}
               </div>
@@ -55,12 +55,12 @@ function ProgressOverlay({ step }: { step: NonNullable<CreateStep> }) {
         </div>
 
         {/* Current step info */}
-        <h3 className="text-lg font-semibold text-center mb-2">{step.label}</h3>
-        <p className="text-sm text-gray-500 text-center leading-relaxed">{step.desc}</p>
+        <h3 className="text-lg font-semibold text-center mb-2 text-foreground">{step.label}</h3>
+        <p className="text-sm text-muted-foreground text-center leading-relaxed">{step.desc}</p>
 
         {/* Loading spinner */}
         <div className="flex justify-center mt-5">
-          <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-500" />
+          <div className="h-6 w-6 animate-spin rounded-full border-2 border-secondary border-t-neon-pink" />
         </div>
       </div>
     </div>

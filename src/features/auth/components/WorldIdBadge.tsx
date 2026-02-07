@@ -7,7 +7,7 @@ interface WorldIdBadgeProps {
 export function WorldIdBadge({ verified }: WorldIdBadgeProps) {
   if (verified) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-3 py-1 text-sm font-medium text-green-800">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-neon-green/15 px-3 py-1 text-sm font-medium text-neon-green">
         <svg
           className="h-4 w-4"
           fill="none"
@@ -28,7 +28,7 @@ export function WorldIdBadge({ verified }: WorldIdBadgeProps) {
   }
 
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-600">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-secondary px-3 py-1 text-sm font-medium text-muted-foreground">
       <svg
         className="h-4 w-4"
         fill="none"

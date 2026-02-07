@@ -24,7 +24,7 @@ function WinnerRow({ address, index, isMe }: { address: string; index: number; i
   const username = profile?.username;
 
   return (
-    <div className="flex items-center gap-2 bg-white rounded-lg p-3">
+    <div className="flex items-center gap-2 bg-secondary rounded-lg p-3">
       <div className="w-8 h-8 rounded-full bg-yellow-100 flex items-center justify-center text-yellow-700 font-bold">
         {index + 1}
       </div>

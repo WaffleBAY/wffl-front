@@ -50,18 +50,18 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
         <Sheet.Content>
           <div className="flex flex-col items-center px-6 pb-8">
             {/* App Logo/Title */}
-            <h1 className="mb-2 text-2xl font-bold text-gray-900">World Raffle</h1>
-            <p className="mb-8 text-center text-sm text-gray-500">
-              실물 경품 복권 마켓플레이스
+            <h1 className="mb-2 text-2xl font-black header-title">WFFL</h1>
+            <p className="mb-8 text-center text-sm text-muted-foreground">
+              실물 경품 래플 마켓플레이스
             </p>
 
             {/* Show message if not in World App */}
             {!isMiniKitInstalled && (
-              <div className="w-full rounded-xl bg-yellow-50 p-4 text-center">
-                <p className="text-sm font-medium text-yellow-800">
+              <div className="w-full rounded-xl bg-neon-orange/10 border border-neon-orange/30 p-4 text-center">
+                <p className="text-sm font-medium text-neon-orange">
                   World App에서 열어주세요
                 </p>
-                <p className="mt-1 text-xs text-yellow-600">
+                <p className="mt-1 text-xs text-muted-foreground">
                   이 앱은 World App 내에서만 사용할 수 있습니다
                 </p>
               </div>
@@ -73,7 +73,7 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
                 <button
                   onClick={handleConnectWallet}
                   disabled={isLoading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-black py-4 text-base font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-neon-pink to-neon-orange py-4 text-base font-bold text-white uppercase tracking-wide transition-all hover:shadow-[0_0_20px_rgba(255,20,147,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
@@ -105,13 +105,13 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
 
                 {/* Debug step display */}
                 {debugStep && (
-                  <p className="mt-3 text-center text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                  <p className="mt-3 text-center text-xs text-neon-cyan bg-neon-cyan/10 p-2 rounded border border-neon-cyan/20">
                     [Debug] {debugStep}
                   </p>
                 )}
 
                 {error && (
-                  <p className="mt-3 text-center text-sm text-red-600">{error}</p>
+                  <p className="mt-3 text-center text-sm text-destructive">{error}</p>
                 )}
               </div>
             )}
@@ -120,9 +120,9 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
             {isMiniKitInstalled && isWalletConnected && !isWorldIdVerified && (
               <div className="w-full">
                 {/* Success message for wallet connection */}
-                <div className="mb-6 rounded-xl bg-green-50 p-4 text-center">
+                <div className="mb-6 rounded-xl bg-neon-green/10 border border-neon-green/20 p-4 text-center">
                   <svg
-                    className="mx-auto mb-2 h-8 w-8 text-green-600"
+                    className="mx-auto mb-2 h-8 w-8 text-neon-green"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -134,7 +134,7 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
                       d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
                     />
                   </svg>
-                  <p className="font-medium text-green-800">
+                  <p className="font-medium neon-text-green">
                     지갑이 연결되었습니다
                   </p>
                 </div>
@@ -148,7 +148,7 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
                 <button
                   onClick={handleVerifyWorldId}
                   disabled={isLoading}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-black py-4 text-base font-semibold text-white transition-colors hover:bg-gray-800 disabled:cursor-not-allowed disabled:bg-gray-400"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-neon-cyan to-neon-green py-4 text-base font-bold text-white uppercase tracking-wide transition-all hover:shadow-[0_0_20px_rgba(0,229,255,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isLoading ? (
                     <>
@@ -179,18 +179,18 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
                 </button>
 
                 {/* Help text */}
-                <p className="mt-3 text-center text-sm text-gray-500">
+                <p className="mt-3 text-center text-sm text-muted-foreground">
                   World App에서 인증을 완료해주세요
                 </p>
 
                 {/* Error message with retry option */}
                 {error && (
-                  <div className="mt-4 rounded-xl bg-red-50 p-4">
-                    <p className="text-center text-sm text-red-600">{error}</p>
+                  <div className="mt-4 rounded-xl bg-destructive/10 border border-destructive/20 p-4">
+                    <p className="text-center text-sm text-destructive">{error}</p>
                     <button
                       onClick={handleVerifyWorldId}
                       disabled={isLoading}
-                      className="mt-3 w-full rounded-lg bg-red-100 py-2 text-sm font-medium text-red-700 hover:bg-red-200"
+                      className="mt-3 w-full rounded-lg bg-destructive/20 py-2 text-sm font-medium text-destructive hover:bg-destructive/30"
                     >
                       다시 시도
                     </button>
@@ -201,14 +201,14 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
 
             {/* Dev Mode Toggle - Only in development */}
             {isDev && (
-              <div className="mt-8 w-full border-t border-gray-200 pt-6">
+              <div className="mt-8 w-full border-t border-border pt-6">
                 <button
                   onClick={handleDevModeLogin}
-                  className="w-full rounded-xl border-2 border-dashed border-orange-300 bg-orange-50 py-3 text-sm font-medium text-orange-600 transition-colors hover:bg-orange-100"
+                  className="w-full rounded-xl border-2 border-dashed border-neon-orange/50 bg-neon-orange/10 py-3 text-sm font-medium text-neon-orange transition-colors hover:bg-neon-orange/20"
                 >
-                  🛠 개발자 모드로 진입
+                  개발자 모드로 진입
                 </button>
-                <p className="mt-2 text-center text-xs text-gray-400">
+                <p className="mt-2 text-center text-xs text-muted-foreground">
                   개발 환경에서만 표시됩니다
                 </p>
               </div>

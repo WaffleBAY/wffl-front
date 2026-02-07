@@ -22,14 +22,14 @@ export function ProfileCard() {
   }
 
   return (
-    <div className="flex flex-col items-center rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <div className="flex flex-col items-center rounded-xl card-neon p-6">
       {/* Jazzicon Avatar */}
-      <div className="h-16 w-16 overflow-hidden rounded-full">
+      <div className="h-16 w-16 overflow-hidden rounded-full neon-border">
         <Jazzicon address={walletAddress} />
       </div>
 
       {/* Abbreviated Wallet Address */}
-      <p className="mt-3 font-mono text-lg text-gray-900">
+      <p className="mt-3 font-mono text-lg text-foreground">
         {abbreviateAddress(walletAddress)}
       </p>
 

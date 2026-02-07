@@ -45,26 +45,26 @@ export function FailedStatusUI({ lottery, onClaimRefund, claimRefundStep }: Fail
   return (
     <div className="space-y-4">
       {/* Failure notice */}
-      <div className="bg-red-50 rounded-xl p-4 space-y-3 border border-red-200">
-        <div className="flex items-center gap-2 text-red-700">
+      <div className="bg-destructive/10 rounded-xl p-4 space-y-3 border border-destructive/20">
+        <div className="flex items-center gap-2 text-destructive">
           <XCircle className="w-5 h-5" />
           <span className="font-medium">마켓 종료</span>
         </div>
 
-        <p className="text-sm text-red-600">{failureReason}</p>
+        <p className="text-sm text-destructive/80">{failureReason}</p>
 
-        <div className="bg-white rounded-lg p-3 text-sm">
-          <div className="flex justify-between text-slate-600">
+        <div className="bg-secondary rounded-lg p-3 text-sm">
+          <div className="flex justify-between text-muted-foreground">
             <span>모금액</span>
             <span>{formatEther(BigInt(lottery.prizePool))} WLD</span>
           </div>
           {lottery.marketType === MarketType.LOTTERY && (
-            <div className="flex justify-between text-slate-600 mt-1">
+            <div className="flex justify-between text-muted-foreground mt-1">
               <span>목표액</span>
               <span>{formatEther(BigInt(lottery.goalAmount))} WLD</span>
             </div>
           )}
-          <div className="flex justify-between text-slate-600 mt-1">
+          <div className="flex justify-between text-muted-foreground mt-1">
             <span>참여자</span>
             <span>{lottery.participantCount}명</span>
           </div>
@@ -73,22 +73,22 @@ export function FailedStatusUI({ lottery, onClaimRefund, claimRefundStep }: Fail
 
       {/* Refund for participants - hide if already refunded */}
       {isWalletConnected && hasEntered && !isSeller && !depositRefunded && (
-        <div className="bg-slate-50 rounded-xl p-4 space-y-3">
-          <div className="flex items-center gap-2 text-slate-700">
+        <div className="bg-secondary rounded-xl p-4 space-y-3">
+          <div className="flex items-center gap-2 text-foreground">
             <RefreshCcw className="w-5 h-5" />
             <span className="font-medium">환불 가능</span>
           </div>
 
-          <p className="text-sm text-slate-600">
+          <p className="text-sm text-muted-foreground">
             마켓이 실패하여 참가비 전액을 환불받으실 수 있습니다.
           </p>
 
-          <div className="bg-white rounded-lg p-3">
+          <div className="bg-accent rounded-lg p-3">
             <div className="flex justify-between font-medium">
               <span>환불 금액</span>
               <span>{formatEther(refundAmount)} WLD</span>
             </div>
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-muted-foreground mt-1">
               티켓 가격 + 보증금
             </p>
           </div>
@@ -105,8 +105,8 @@ export function FailedStatusUI({ lottery, onClaimRefund, claimRefundStep }: Fail
 
       {/* Seller view */}
       {isSeller && (
-        <div className="bg-slate-50 rounded-xl p-4 space-y-2">
-          <p className="text-sm text-slate-600">
+        <div className="bg-secondary rounded-xl p-4 space-y-2">
+          <p className="text-sm text-muted-foreground">
             마켓이 목표에 도달하지 못해 종료되었습니다.
             {lottery.marketType === MarketType.RAFFLE && (
               <span> 판매자 보증금은 자동으로 반환됩니다.</span>
@@ -117,8 +117,8 @@ export function FailedStatusUI({ lottery, onClaimRefund, claimRefundStep }: Fail
 
       {/* Guest view */}
       {!isWalletConnected && (
-        <div className="bg-slate-50 rounded-xl p-4">
-          <p className="text-sm text-slate-500">
+        <div className="bg-secondary rounded-xl p-4">
+          <p className="text-sm text-muted-foreground">
             이 마켓은 종료되었습니다.
           </p>
         </div>
