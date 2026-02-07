@@ -133,9 +133,10 @@ export function useClaimRefund(marketAddress: Address | undefined) {
         throw new Error('World App에서 열어주세요')
       }
 
-      // Read the market's actual factory address on-chain.
-      // Old markets may reference a different factory than the current one,
-      // and the market's onlyFactory modifier requires the exact stored factory.
+      // Determine how to call claimRefund:
+      // - New factory has claimRefund(market) → use factory (registered in MiniKit)
+      // - Old factory doesn't have claimRefund → call market.claimRefund() directly
+      const currentFactory = getWaffleFactoryAddress(CHAIN_ID)
       const publicClient = createPublicClient({ chain: worldChain, transport: http() })
       const marketFactory = await publicClient.readContract({
         address: marketAddress,
@@ -143,17 +144,26 @@ export function useClaimRefund(marketAddress: Address | undefined) {
         functionName: 'factory',
       }) as Address
 
-      console.log('[Refund] Using market factory:', marketFactory, 'for market:', marketAddress)
+      const useFactoryProxy = marketFactory.toLowerCase() === currentFactory.toLowerCase()
+      console.log('[Refund] marketFactory:', marketFactory, 'currentFactory:', currentFactory, 'useProxy:', useFactoryProxy)
+
       let result
       try {
         result = await MiniKit.commandsAsync.sendTransaction({
           transaction: [
-            {
-              address: marketFactory,
-              abi: waffleFactoryAbi as readonly object[],
-              functionName: 'claimRefund',
-              args: [marketAddress],
-            },
+            useFactoryProxy
+              ? {
+                  address: currentFactory,
+                  abi: waffleFactoryAbi as readonly object[],
+                  functionName: 'claimRefund',
+                  args: [marketAddress],
+                }
+              : {
+                  address: marketAddress,
+                  abi: waffleMarketAbi as readonly object[],
+                  functionName: 'claimRefund',
+                  args: [],
+                },
           ],
         })
       } catch (txError) {
@@ -173,9 +183,11 @@ export function useClaimRefund(marketAddress: Address | undefined) {
         const errorCode = payload.error_code || 'unknown'
         console.error('[Refund] MiniKit error:', errorCode, JSON.stringify(txPayload))
 
+        const targetAddr = useFactoryProxy ? currentFactory : marketAddress
         const errorMessages: Record<string, string> = {
           user_rejected: '사용자가 거부했습니다',
-          invalid_contract: `등록되지 않은 컨트랙트입니다.\nDeveloper Portal에 팩토리 주소를 등록해주세요:\n${marketFactory}`,
+          invalid_contract: `등록되지 않은 컨트랙트입니다.\nDeveloper Portal에 주소를 등록해주세요:\n${targetAddr}`,
+          simulation_failed: `온체인 시뮬레이션 실패.\n컨트랙트: ${targetAddr}\n${(payload as Record<string, unknown>).details ? JSON.stringify((payload as Record<string, unknown>).details) : ''}`,
           generic_error: `트랜잭션 실패: ${payload.message || payload.detail || '알 수 없는 오류'}`,
         }
         throw new Error(errorMessages[errorCode] || `에러 [${errorCode}]: ${JSON.stringify(txPayload).slice(0, 300)}`)
