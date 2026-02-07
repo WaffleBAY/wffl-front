@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle, Trophy, Users, MessageCircle } from 'lucide-react';
+import { CheckCircle, Trophy, Users } from 'lucide-react';
 import type { Lottery } from '../../types/Lottery';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { abbreviateAddress } from '@/features/auth/utils/address';
@@ -10,7 +10,6 @@ import type { SettlementStep } from '../../hooks/useContractWrite';
 import type { Address } from 'viem';
 import { useParticipantInfo } from '../../hooks/useContractRead';
 import { useUserProfile } from '@/features/user/hooks/useUserProfile';
-import { generateWorldChatLink } from '../../utils/worldChatLink';
 
 interface CompletedStatusUIProps {
   lottery: Lottery;
@@ -23,33 +22,7 @@ interface CompletedStatusUIProps {
   claimRefundStep?: SettlementStep;
 }
 
-function SellerChatSection({ sellerAddress }: { sellerAddress: string }) {
-  const { profile, isLoading } = useUserProfile(sellerAddress);
-  const username = profile?.username;
-
-  return (
-    <div className="bg-green-50 rounded-xl p-4 space-y-3 border border-green-200">
-      <p className="text-sm text-green-700">
-        축하합니다! 판매자에게 연락하여 경품 수령 방법을 확인하세요.
-      </p>
-      <Button
-        variant="outline"
-        className="w-full"
-        disabled={isLoading || !username}
-        onClick={() => {
-          if (username) {
-            window.location.href = generateWorldChatLink(username);
-          }
-        }}
-      >
-        <MessageCircle className="w-4 h-4 mr-2" />
-        {isLoading ? '로딩 중...' : !username ? '판매자 연락 불가' : '판매자에게 연락'}
-      </Button>
-    </div>
-  );
-}
-
-function WinnerRow({ address, index, isMe, showChat }: { address: string; index: number; isMe: boolean; showChat: boolean }) {
+function WinnerRow({ address, index, isMe }: { address: string; index: number; isMe: boolean }) {
   const { profile, isLoading } = useUserProfile(address);
   const username = profile?.username;
 
@@ -61,23 +34,11 @@ function WinnerRow({ address, index, isMe, showChat }: { address: string; index:
       <span className="text-sm">
         {isLoading ? abbreviateAddress(address) : username ? `@${username}` : abbreviateAddress(address)}
       </span>
-      {isMe ? (
+      {isMe && (
         <span className="ml-auto text-xs bg-yellow-500 text-white px-2 py-1 rounded-full">
           나
         </span>
-      ) : showChat && username ? (
-        <button
-          className="ml-auto shrink-0 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded-md hover:bg-blue-50"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.location.href = generateWorldChatLink(username);
-          }}
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          채팅
-        </button>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -94,10 +55,6 @@ export function CompletedStatusUI({ lottery, contractData, onClaimRefund, claimR
     ? Array.from(contractData.participants)
     : [];
 
-  const isWinner = walletAddress
-    ? winners.some((w) => w.toLowerCase() === walletAddress.toLowerCase())
-    : false;
-
   const hasEntered = walletAddress
     ? participants.some((p) => p.toLowerCase() === walletAddress.toLowerCase())
     : false;
@@ -107,8 +64,6 @@ export function CompletedStatusUI({ lottery, contractData, onClaimRefund, claimR
     lottery.contractAddress as Address | undefined,
     walletAddress as Address | undefined
   );
-
-  const isSeller = walletAddress?.toLowerCase() === lottery.seller.toLowerCase();
 
   const isClaimProcessing = claimRefundStep === 'signing' || claimRefundStep === 'confirming';
   const canClaimRefund = (hasEntered || onChainEntered) && !depositRefunded;
@@ -140,7 +95,6 @@ export function CompletedStatusUI({ lottery, contractData, onClaimRefund, claimR
                 address={winner}
                 index={index}
                 isMe={isWalletConnected && winner.toLowerCase() === walletAddress?.toLowerCase()}
-                showChat={isSeller}
               />
             ))}
           </div>
@@ -177,9 +131,6 @@ export function CompletedStatusUI({ lottery, contractData, onClaimRefund, claimR
           </div>
         </div>
       )}
-
-      {/* Winner → Seller chat */}
-      {isWinner && <SellerChatSection sellerAddress={lottery.seller} />}
 
       {/* Deposit refund button */}
       {canClaimRefund && (

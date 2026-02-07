@@ -1,13 +1,12 @@
 'use client';
 
-import { Trophy, PartyPopper, Check, MessageCircle } from 'lucide-react';
+import { Trophy, PartyPopper, Check } from 'lucide-react';
 import type { Address } from 'viem';
 import type { Lottery } from '../../types/Lottery';
 import { MarketType, isUserWinner } from '../../types';
 import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { Button } from '@/components/ui/button';
 import { abbreviateAddress } from '@/features/auth/utils/address';
-import { generateWorldChatLink } from '../../utils/worldChatLink';
 import { useUserProfile } from '@/features/user/hooks/useUserProfile';
 import { useParticipantInfo } from '../../hooks/useContractRead';
 import type { SettlementStep } from '../../hooks/useContractWrite';
@@ -20,7 +19,7 @@ interface RevealedStatusUIProps {
   claimRefundStep?: SettlementStep;
 }
 
-function WinnerRow({ address, index, isMe, showChat }: { address: string; index: number; isMe: boolean; showChat: boolean }) {
+function WinnerRow({ address, index, isMe }: { address: string; index: number; isMe: boolean }) {
   const { profile, isLoading } = useUserProfile(address);
   const username = profile?.username;
 
@@ -32,23 +31,11 @@ function WinnerRow({ address, index, isMe, showChat }: { address: string; index:
       <span className="text-sm">
         {isLoading ? abbreviateAddress(address) : username ? `@${username}` : abbreviateAddress(address)}
       </span>
-      {isMe ? (
+      {isMe && (
         <span className="ml-auto text-xs bg-yellow-500 text-white px-2 py-1 rounded-full">
           나
         </span>
-      ) : showChat && username ? (
-        <button
-          className="ml-auto shrink-0 flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 px-2 py-1 rounded-md hover:bg-blue-50"
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            window.location.href = generateWorldChatLink(username);
-          }}
-        >
-          <MessageCircle className="w-3.5 h-3.5" />
-          채팅
-        </button>
-      ) : null}
+      )}
     </div>
   );
 }
@@ -57,25 +44,19 @@ export function RevealedStatusUI({
   lottery,
   onSettle,
   settleStep,
-  onClaimRefund,
-  claimRefundStep,
 }: RevealedStatusUIProps) {
   const { walletAddress, isWalletConnected } = useAuthStore();
   const isWinner = walletAddress ? isUserWinner(lottery, walletAddress) : false;
   const isSeller = walletAddress?.toLowerCase() === lottery.seller.toLowerCase();
 
   // Get participation info from contract
-  const { hasEntered, depositRefunded } = useParticipantInfo(
+  const { hasEntered } = useParticipantInfo(
     lottery.contractAddress as Address | undefined,
     walletAddress as Address | undefined
   );
 
-  const { profile: sellerProfile } = useUserProfile(lottery.seller);
-  const sellerUsername = sellerProfile?.username;
-
   // Loading state checks
   const isSettleProcessing = settleStep === 'signing' || settleStep === 'confirming';
-  const isClaimRefundProcessing = claimRefundStep === 'signing' || claimRefundStep === 'confirming';
 
   return (
     <div className="space-y-4">
@@ -93,7 +74,6 @@ export function RevealedStatusUI({
               address={winner}
               index={index}
               isMe={isWalletConnected && winner.toLowerCase() === walletAddress?.toLowerCase()}
-              showChat={isSeller}
             />
           ))}
         </div>
@@ -105,33 +85,16 @@ export function RevealedStatusUI({
         )}
       </div>
 
-      {/* Winner actions */}
+      {/* Winner congratulations */}
       {isWinner && (
         <div className="bg-green-50 rounded-xl p-4 space-y-3 border border-green-200">
           <div className="flex items-center gap-2 text-green-700">
             <PartyPopper className="w-5 h-5" />
             <span className="font-medium">축하합니다! 당첨되셨습니다!</span>
           </div>
-
           <p className="text-sm text-green-600">
-            판매자에게 연락하여 경품 수령 방법을 확인하세요.
+            정산 완료 후 경품 수령 안내가 진행됩니다.
           </p>
-
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              className="flex-1"
-              onClick={() => {
-                if (sellerUsername) {
-                  window.location.href = generateWorldChatLink(sellerUsername);
-                }
-              }}
-              disabled={!sellerUsername}
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              판매자 연락
-            </Button>
-          </div>
         </div>
       )}
 
