@@ -51,6 +51,6 @@ export const waffleFactoryConfig = {
   // address is chain-dependent, use getWaffleFactoryAddress(chainId)
 } as const
 
-export const PARTICIPANT_DEPOSIT = BigInt('5000000000000000000') // 5 WLD (5 * 1e18)
+export const PARTICIPANT_DEPOSIT = BigInt('5000000000000000') // 0.005 WLD (5 * 1e15)
 export const WORLD_FOUNDATION_FEE_BPS = 300 // 3%
 export const OPS_WALLET_FEE_BPS = 200 // 2%
