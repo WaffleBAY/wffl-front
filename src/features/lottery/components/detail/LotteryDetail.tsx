@@ -133,11 +133,31 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
   // On-chain contract data (participants, winners, status)
   const contractData = useLotteryContractData(lottery.contractAddress as Address | undefined);
 
+  // Map on-chain status (number) to LotteryStatus enum, prefer on-chain over backend
+  const effectiveStatus = useMemo(() => {
+    if (contractData.status === undefined) return lottery.status;
+    const statusMap: Record<number, LotteryStatus> = {
+      0: LotteryStatus.CREATED,
+      1: LotteryStatus.OPEN,
+      2: LotteryStatus.CLOSED,
+      3: LotteryStatus.REVEALED,
+      4: LotteryStatus.COMPLETED,
+      5: LotteryStatus.FAILED,
+    };
+    return statusMap[contractData.status] ?? lottery.status;
+  }, [contractData.status, lottery.status]);
+
+  // Create lottery with effective (on-chain) status for child components
+  const effectiveLottery = useMemo(() => {
+    if (effectiveStatus === lottery.status) return lottery;
+    return { ...lottery, status: effectiveStatus };
+  }, [lottery, effectiveStatus]);
+
   // Calculate refund amount for dialog based on status
   // FAILED: ticketPrice + participantDeposit (pool share)
   // COMPLETED: participantDeposit only
   const getRefundAmountForDialog = () => {
-    if (lottery.status === LotteryStatus.FAILED) {
+    if (effectiveStatus === LotteryStatus.FAILED) {
       const totalRefund = BigInt(lottery.ticketPrice) + PARTICIPANT_DEPOSIT;
       return formatEther(totalRefund) + ' WLD';
     }
@@ -188,10 +208,10 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
     const isWinningStatus = [
       LotteryStatus.REVEALED,
       LotteryStatus.COMPLETED,
-    ].includes(lottery.status);
+    ].includes(effectiveStatus);
 
     return role === 'winner' && isWinningStatus && !hasCelebrated(lottery.id);
-  }, [celebrationHasHydrated, celebrationDismissed, role, lottery.id, lottery.status, hasCelebrated]);
+  }, [celebrationHasHydrated, celebrationDismissed, role, lottery.id, effectiveStatus, hasCelebrated]);
 
   // Mark as celebrated when shown (external sync effect)
   useEffect(() => {
@@ -207,22 +227,22 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
       )}
 
       {/* Header with image and status badge */}
-      <LotteryHeader lottery={lottery} />
+      <LotteryHeader lottery={effectiveLottery} />
 
       {/* Content section */}
       <div className="mt-4 space-y-6">
         {/* Lottery info: title, description, prices */}
-        <LotteryInfo lottery={lottery} />
+        <LotteryInfo lottery={effectiveLottery} />
 
         {/* Participation progress bar */}
-        <ParticipationProgress lottery={lottery} onChainParticipants={contractData.participants} onChainPrizePool={contractData.prizePool} />
+        <ParticipationProgress lottery={effectiveLottery} onChainParticipants={contractData.participants} onChainPrizePool={contractData.prizePool} />
 
         {/* Seller info with WorldID badge */}
         <SellerInfo sellerAddress={lottery.seller} isVerified={true} />
 
         {/* Status-specific UI */}
         <LotteryStatusUI
-          lottery={lottery}
+          lottery={effectiveLottery}
           hasEntered={hasEntered}
           onOpenMarket={handleOpenMarket}
           openMarketStep={openMarketStep}
@@ -280,9 +300,9 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
       />
 
       {/* Entry CTA - only for OPEN status, not for seller */}
-      {lottery.status === LotteryStatus.OPEN && role !== 'seller' && (
+      {effectiveStatus === LotteryStatus.OPEN && role !== 'seller' && (
         <EntryButton
-          lottery={lottery}
+          lottery={effectiveLottery}
           participantAddresses={participantAddresses}
         />
       )}
