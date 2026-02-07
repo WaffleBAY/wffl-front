@@ -270,7 +270,7 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
 
       {/* Draw result dialog */}
       <SettlementResultDialog
-        action="settle"
+        action="draw"
         isSuccess={drawStep === 'success'}
         isError={drawStep === 'error'}
         errorMessage={drawError}

@@ -5,7 +5,8 @@
  */
 
 import { useState, useMemo, useCallback, useEffect } from 'react'
-import { decodeAbiParameters, type Address } from 'viem'
+import { createPublicClient, http, decodeAbiParameters, type Address } from 'viem'
+import { worldChain } from '@/config/wagmi'
 import { useWaitForTransactionReceipt } from 'wagmi'
 import type { BaseError } from 'wagmi'
 import { MiniKit, VerificationLevel } from '@worldcoin/minikit-js'
@@ -386,21 +387,54 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
 
       const factoryAddress = getWaffleFactoryAddress(CHAIN_ID)
 
-      const result = await MiniKit.commandsAsync.sendTransaction({
-        transaction: [
-          {
-            address: factoryAddress,
-            abi: waffleFactoryAbi as readonly object[],
-            functionName: 'closeDrawAndSettle',
-            args: [marketAddress],
-          },
-        ],
-      })
+      // Pre-flight: simulate contract call to catch reverts early
+      console.log('[Draw] Pre-flight simulation...', { factoryAddress, marketAddress })
+      try {
+        const publicClient = createPublicClient({ chain: worldChain, transport: http() })
+        await publicClient.simulateContract({
+          address: factoryAddress,
+          abi: waffleFactoryAbi,
+          functionName: 'closeDrawAndSettle',
+          args: [marketAddress],
+        })
+        console.log('[Draw] Simulation passed')
+      } catch (simError: unknown) {
+        const reason = simError instanceof Error ? simError.message : String(simError)
+        console.error('[Draw] Simulation failed:', reason)
+        throw new Error(`컨트랙트 호출 실패: ${reason.slice(0, 300)}`)
+      }
+
+      console.log('[Draw] Sending MiniKit transaction...')
+      let result
+      try {
+        result = await MiniKit.commandsAsync.sendTransaction({
+          transaction: [
+            {
+              address: factoryAddress,
+              abi: waffleFactoryAbi as readonly object[],
+              functionName: 'closeDrawAndSettle',
+              args: [marketAddress],
+            },
+          ],
+        })
+      } catch (txError) {
+        const msg = txError instanceof Error
+          ? txError.message
+          : typeof txError === 'object'
+            ? JSON.stringify(txError, null, 0)
+            : String(txError)
+        throw new Error(`MiniKit 에러: ${msg.slice(0, 300)}`)
+      }
 
       const { finalPayload: txPayload } = result
+      console.log('[Draw] MiniKit response:', JSON.stringify(txPayload).slice(0, 300))
 
       if (txPayload.status === 'error') {
-        throw new Error(`TX 에러: ${JSON.stringify(txPayload).slice(0, 200)}`)
+        const errorCode = (txPayload as { error_code?: string }).error_code
+        const errorDetail = errorCode === 'user_rejected'
+          ? '사용자가 거부했습니다'
+          : `TX 에러: ${JSON.stringify(txPayload).slice(0, 200)}`
+        throw new Error(errorDetail)
       }
 
       // Poll for confirmation
@@ -408,6 +442,7 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
 
       const transactionId = (txPayload as { transaction_id: string }).transaction_id
       const appId = process.env.NEXT_PUBLIC_APP_ID
+      console.log('[Draw] Polling for tx hash, transactionId:', transactionId)
 
       let realHash: string | null = null
       for (let i = 0; i < 30; i++) {
@@ -416,8 +451,9 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
           const res = await fetch(url)
           if (res.ok) {
             const data = await res.json()
+            console.log(`[Draw] Poll ${i}:`, data.transactionStatus, data.transactionHash?.slice(0, 10))
             if (data.transactionStatus === 'failed') {
-              throw new Error('트랜잭션이 실패했습니다')
+              throw new Error(`트랜잭션 실패 (relayer): ${JSON.stringify(data).slice(0, 200)}`)
             }
             if (data.transactionHash) {
               realHash = data.transactionHash
@@ -425,19 +461,21 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
             }
           }
         } catch (e) {
-          if (e instanceof Error && e.message === '트랜잭션이 실패했습니다') throw e
+          if (e instanceof Error && e.message.startsWith('트랜잭션 실패')) throw e
         }
         await new Promise(r => setTimeout(r, 2000))
       }
 
       if (!realHash) {
-        throw new Error('트랜잭션 해시를 가져오지 못했습니다')
+        throw new Error('트랜잭션 해시를 가져오지 못했습니다 (timeout)')
       }
 
+      console.log('[Draw] Success! txHash:', realHash)
       setHash(realHash as `0x${string}`)
       setStep('success')
     } catch (err) {
       const message = err instanceof Error ? err.message : '추첨에 실패했습니다'
+      console.error('[Draw] Error:', message, err)
       setError(message)
       setStep('error')
     }

@@ -12,7 +12,7 @@ import {
 import { PartyPopper, AlertCircle, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
-type SettlementAction = 'settle' | 'claimRefund';
+type SettlementAction = 'settle' | 'claimRefund' | 'draw';
 
 interface SettlementResultDialogProps {
   action: SettlementAction;
@@ -43,13 +43,14 @@ export function SettlementResultDialog({
   if (!isOpen) return null;
 
   if (isSuccess) {
-    const isSettle = action === 'settle';
-    const title = isSettle ? '정산 완료!' : '환불 완료!';
-    const Icon = isSettle ? PartyPopper : Coins;
-    const iconColor = isSettle ? 'text-yellow-500' : 'text-green-500';
-    const description = isSettle
-      ? '마켓 정산이 완료되었습니다.'
-      : `환불금 ${refundAmount || ''}이 반환되었습니다.`;
+    const title = action === 'draw' ? '추첨 완료!' : action === 'settle' ? '정산 완료!' : '환불 완료!';
+    const Icon = action === 'claimRefund' ? Coins : PartyPopper;
+    const iconColor = action === 'claimRefund' ? 'text-green-500' : 'text-yellow-500';
+    const description = action === 'draw'
+      ? '추첨 및 정산이 완료되었습니다.'
+      : action === 'settle'
+        ? '마켓 정산이 완료되었습니다.'
+        : `환불금 ${refundAmount || ''}이 반환되었습니다.`;
 
     return (
       <AlertDialog open onOpenChange={onClose}>
@@ -71,7 +72,7 @@ export function SettlementResultDialog({
 
   // Error case
   const errorTitle =
-    action === 'settle' ? '정산 실패' : '환불 요청 실패';
+    action === 'draw' ? '추첨 실패' : action === 'settle' ? '정산 실패' : '환불 요청 실패';
 
   return (
     <AlertDialog open onOpenChange={onClose}>
