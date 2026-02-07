@@ -26,10 +26,10 @@ import {
 export function useLotteryContractData(marketAddress: Address | undefined) {
   const chainId = CHAIN_ID
 
-  const { data: statusNum, isLoading: statusLoading } = useReadWaffleMarketStatus({
+  const { data: statusNum, isLoading: statusLoading, refetch: refetchStatus } = useReadWaffleMarketStatus({
     address: marketAddress,
     chainId,
-    query: { enabled: !!marketAddress },
+    query: { enabled: !!marketAddress, refetchInterval: 5000 },
   })
 
   const { data: ticketPrice, isLoading: priceLoading } = useReadWaffleMarketTicketPrice({
@@ -44,16 +44,16 @@ export function useLotteryContractData(marketAddress: Address | undefined) {
     query: { enabled: !!marketAddress },
   })
 
-  const { data: prizePool, isLoading: poolLoading } = useReadWaffleMarketPrizePool({
+  const { data: prizePool, isLoading: poolLoading, refetch: refetchPrizePool } = useReadWaffleMarketPrizePool({
     address: marketAddress,
     chainId,
-    query: { enabled: !!marketAddress },
+    query: { enabled: !!marketAddress, refetchInterval: 5000 },
   })
 
-  const { data: participants, isLoading: participantsLoading } = useReadWaffleMarketGetParticipants({
+  const { data: participants, isLoading: participantsLoading, refetch: refetchParticipants } = useReadWaffleMarketGetParticipants({
     address: marketAddress,
     chainId,
-    query: { enabled: !!marketAddress },
+    query: { enabled: !!marketAddress, refetchInterval: 5000 },
   })
 
   const { data: marketType, isLoading: typeLoading } = useReadWaffleMarketMType({
@@ -74,10 +74,10 @@ export function useLotteryContractData(marketAddress: Address | undefined) {
     query: { enabled: !!marketAddress },
   })
 
-  const { data: winners, isLoading: winnersLoading } = useReadWaffleMarketGetWinners({
+  const { data: winners, isLoading: winnersLoading, refetch: refetchWinners } = useReadWaffleMarketGetWinners({
     address: marketAddress,
     chainId,
-    query: { enabled: !!marketAddress },
+    query: { enabled: !!marketAddress, refetchInterval: 5000 },
   })
 
   const { data: preparedQuantity, isLoading: preparedQuantityLoading } = useReadWaffleMarketPreparedQuantity({
@@ -98,6 +98,10 @@ export function useLotteryContractData(marketAddress: Address | undefined) {
     winnersLoading ||
     preparedQuantityLoading
 
+  const refetchAll = async () => {
+    await Promise.all([refetchStatus(), refetchWinners(), refetchPrizePool(), refetchParticipants()])
+  }
+
   return {
     status: statusNum,
     ticketPrice,
@@ -111,6 +115,7 @@ export function useLotteryContractData(marketAddress: Address | undefined) {
     winners,
     preparedQuantity,
     isLoading,
+    refetchAll,
   }
 }
 

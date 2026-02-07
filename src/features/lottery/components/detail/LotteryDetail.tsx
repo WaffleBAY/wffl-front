@@ -122,12 +122,14 @@ export function LotteryDetail({ lottery }: LotteryDetailProps) {
 
   const handleDrawResultClose = () => {
     resetDraw();
-    // Always refresh after draw dialog (success or "already completed" error)
+    // Refetch on-chain data (status, winners, etc.) and refresh server data
+    contractData.refetchAll();
     router.refresh();
   };
 
   const handleDrawRetry = () => {
     resetDraw();
+    contractData.refetchAll();
     router.refresh();
   };
 
