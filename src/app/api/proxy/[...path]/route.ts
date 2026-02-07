@@ -24,7 +24,6 @@ async function proxyRequest(request: NextRequest, path: string) {
     // Handle multipart/form-data (file uploads) with binary data
     if (contentType.includes('multipart/form-data')) {
       const buffer = await request.arrayBuffer();
-      console.log(`[Proxy] ${path} - multipart body size: ${buffer.byteLength} bytes`);
       init.body = buffer;
     } else {
       const body = await request.text();
@@ -35,17 +34,8 @@ async function proxyRequest(request: NextRequest, path: string) {
   }
 
   try {
-    console.log(`[Proxy] Forwarding ${request.method} to ${url}`);
     const response = await fetch(url, init);
     const data = await response.arrayBuffer();
-
-    console.log(`[Proxy] Response status: ${response.status}, size: ${data.byteLength} bytes`);
-
-    // Forward error response body for debugging
-    if (response.status >= 400) {
-      const errorText = new TextDecoder().decode(data);
-      console.log(`[Proxy] Error response: ${errorText}`);
-    }
 
     return new NextResponse(data, {
       status: response.status,
@@ -53,8 +43,7 @@ async function proxyRequest(request: NextRequest, path: string) {
         'Content-Type': response.headers.get('Content-Type') || 'application/json',
       },
     });
-  } catch (error) {
-    console.error('Proxy error:', error);
+  } catch {
     return NextResponse.json({ error: 'Backend unavailable' }, { status: 502 });
   }
 }

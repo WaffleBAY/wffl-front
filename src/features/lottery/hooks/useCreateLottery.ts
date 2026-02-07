@@ -2,7 +2,6 @@
 
 import { useState, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { toast } from 'sonner';
 import { MiniKit } from '@worldcoin/minikit-js';
 import type { Address } from 'viem';
 import { waffleFactoryAbi } from '@/contracts/generated';
@@ -108,7 +107,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         const data = JSON.parse(text);
 
         if (data.transactionStatus === 'failed') {
-          toast.error('트랜잭션이 실패했습니다');
           return null;
         }
 
@@ -125,7 +123,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
     }
 
     if (!realHash) {
-      toast.error('트랜잭션 해시를 가져오지 못했습니다');
       return null;
     }
 
@@ -144,12 +141,10 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         }
 
         if (data.status === 'reverted' || data.status === 'failed') {
-          toast.error('트랜잭션이 실패했습니다');
           return null;
         }
 
         if (data.status === 'success_no_event') {
-          toast.error('마켓 생성 이벤트를 찾을 수 없습니다');
           return null;
         }
       } catch {
@@ -159,7 +154,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       await new Promise((r) => setTimeout(r, 3000));
     }
 
-    toast.error('마켓 주소를 가져올 수 없습니다');
     return null;
   }, []);
 
@@ -194,7 +188,6 @@ export function useCreateLottery(): UseCreateLotteryReturn {
 
       const lottery = await repository.create(paramsWithContract);
 
-      toast.success('마켓이 생성되었습니다!');
       router.push(`/lottery/${lottery.id}`);
     } catch (error) {
       // Extract actual validation error from axios response
@@ -204,9 +197,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
         : error instanceof Error
           ? error.message
           : String(error);
-      toast.error(`백엔드 저장 실패: ${errMsg}`);
-      console.error('Backend save error:', error);
-      console.error('Backend response data:', axiosData);
+      // Backend save failed silently
     } finally {
       pendingDataRef.current = null;
       setIsSubmitting(false);
@@ -225,9 +216,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
 
       // Step 1: Upload image
       setCurrentStep(STEPS.upload);
-      console.log('[Create] Starting image upload, file:', data.imageFile.name, data.imageFile.size);
       const imageUrl = await uploadImage(data.imageFile);
-      console.log('[Create] Image uploaded:', imageUrl);
 
       // Step 2: Calculate contract params
       setCurrentStep(STEPS.sign);
@@ -338,8 +327,7 @@ export function useCreateLottery(): UseCreateLotteryReturn {
       } else {
         message = String(error);
       }
-      toast.error(message);
-      console.error('Create lottery error:', error);
+      // Error handled by currentStep reset
       pendingDataRef.current = null;
       setIsSubmitting(false);
       setIsPending(false);

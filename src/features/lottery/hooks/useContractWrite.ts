@@ -145,8 +145,6 @@ export function useClaimRefund(marketAddress: Address | undefined) {
       }) as Address
 
       const useFactoryProxy = marketFactory.toLowerCase() === currentFactory.toLowerCase()
-      console.log('[Refund] marketFactory:', marketFactory, 'currentFactory:', currentFactory, 'useProxy:', useFactoryProxy)
-
       let result
       try {
         result = await MiniKit.commandsAsync.sendTransaction({
@@ -176,12 +174,10 @@ export function useClaimRefund(marketAddress: Address | undefined) {
       }
 
       const { finalPayload: txPayload } = result
-      console.log('[Refund] MiniKit response:', JSON.stringify(txPayload))
 
       if (txPayload.status === 'error') {
         const payload = txPayload as { error_code?: string; message?: string; detail?: string }
         const errorCode = payload.error_code || 'unknown'
-        console.error('[Refund] MiniKit error:', errorCode, JSON.stringify(txPayload))
 
         const targetAddr = useFactoryProxy ? currentFactory : marketAddress
         const errorMessages: Record<string, string> = {
@@ -198,7 +194,6 @@ export function useClaimRefund(marketAddress: Address | undefined) {
 
       const transactionId = (txPayload as { transaction_id: string }).transaction_id
       const appId = process.env.NEXT_PUBLIC_APP_ID
-      console.log('[Refund] Polling for tx hash, transactionId:', transactionId)
 
       let realHash: string | null = null
       for (let i = 0; i < 30; i++) {
@@ -207,7 +202,6 @@ export function useClaimRefund(marketAddress: Address | undefined) {
           const res = await fetch(url)
           if (res.ok) {
             const data = await res.json()
-            console.log(`[Refund] Poll ${i}:`, data.transactionStatus, data.transactionHash?.slice(0, 10))
             if (data.transactionStatus === 'failed') {
               throw new Error(`트랜잭션 실패 (relayer): ${JSON.stringify(data).slice(0, 200)}`)
             }
@@ -226,12 +220,10 @@ export function useClaimRefund(marketAddress: Address | undefined) {
         throw new Error('트랜잭션 해시를 가져오지 못했습니다 (timeout)')
       }
 
-      console.log('[Refund] Success! txHash:', realHash)
       setHash(realHash as `0x${string}`)
       setStep('success')
     } catch (err) {
       const message = err instanceof Error ? err.message : '환불에 실패했습니다'
-      console.error('[Refund] Error:', message, err)
       setError(message)
       setStep('error')
     }
@@ -460,7 +452,6 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
       const factoryAddress = getWaffleFactoryAddress(CHAIN_ID)
 
       // Pre-flight: simulate contract call to catch reverts early
-      console.log('[Draw] Pre-flight simulation...', { factoryAddress, marketAddress })
       try {
         const publicClient = createPublicClient({ chain: worldChain, transport: http() })
         await publicClient.simulateContract({
@@ -469,10 +460,8 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
           functionName: 'closeDrawAndSettle',
           args: [marketAddress],
         })
-        console.log('[Draw] Simulation passed')
       } catch (simError: unknown) {
         const reason = simError instanceof Error ? simError.message : String(simError)
-        console.error('[Draw] Simulation failed:', reason)
         // User-friendly messages for known revert reasons
         if (reason.includes('Not open')) {
           throw new Error('이미 추첨이 완료된 마켓입니다. 페이지를 새로고침합니다...')
@@ -486,7 +475,6 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
         throw new Error(`컨트랙트 호출 실패: ${reason.slice(0, 300)}`)
       }
 
-      console.log('[Draw] Sending MiniKit transaction...')
       let result
       try {
         result = await MiniKit.commandsAsync.sendTransaction({
@@ -509,7 +497,6 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
       }
 
       const { finalPayload: txPayload } = result
-      console.log('[Draw] MiniKit response:', JSON.stringify(txPayload).slice(0, 300))
 
       if (txPayload.status === 'error') {
         const errorCode = (txPayload as { error_code?: string }).error_code
@@ -524,7 +511,6 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
 
       const transactionId = (txPayload as { transaction_id: string }).transaction_id
       const appId = process.env.NEXT_PUBLIC_APP_ID
-      console.log('[Draw] Polling for tx hash, transactionId:', transactionId)
 
       let realHash: string | null = null
       for (let i = 0; i < 30; i++) {
@@ -533,7 +519,6 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
           const res = await fetch(url)
           if (res.ok) {
             const data = await res.json()
-            console.log(`[Draw] Poll ${i}:`, data.transactionStatus, data.transactionHash?.slice(0, 10))
             if (data.transactionStatus === 'failed') {
               throw new Error(`트랜잭션 실패 (relayer): ${JSON.stringify(data).slice(0, 200)}`)
             }
@@ -552,12 +537,10 @@ export function useCloseDrawAndSettle(marketAddress: Address | undefined) {
         throw new Error('트랜잭션 해시를 가져오지 못했습니다 (timeout)')
       }
 
-      console.log('[Draw] Success! txHash:', realHash)
       setHash(realHash as `0x${string}`)
       setStep('success')
     } catch (err) {
       const message = err instanceof Error ? err.message : '추첨에 실패했습니다'
-      console.error('[Draw] Error:', message, err)
       setError(message)
       setStep('error')
     }

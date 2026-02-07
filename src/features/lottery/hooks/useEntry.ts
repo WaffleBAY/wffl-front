@@ -3,7 +3,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { isAddressEqual, type Address } from 'viem';
 import { useAuthStore } from '@/features/auth';
-import { toast } from 'sonner';
 import { LotteryStatus } from '../types';
 import { useEnterMarket, type EntryStep } from './useContractWrite';
 
@@ -50,16 +49,8 @@ export function useEntry(
   useEffect(() => {
     if (step === 'success') {
       setHasEntered(true);
-      toast.success('응모가 완료되었습니다!');
     }
   }, [step]);
-
-  // Show error toast
-  useEffect(() => {
-    if (step === 'error' && error) {
-      toast.error(error);
-    }
-  }, [step, error]);
 
   const canEnter = !hasEntered && lotteryStatus === LotteryStatus.OPEN;
 

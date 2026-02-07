@@ -11,7 +11,7 @@ interface LoginBottomSheetProps {
 }
 
 export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
-  const { isLoading, error, debugStep, connectWallet, verifyWorldId } = useAuth();
+  const { isLoading, error, connectWallet, verifyWorldId } = useAuth();
   const { isWalletConnected, isWorldIdVerified, setDevMode } = useAuthStore();
 
   const isMiniKitInstalled = typeof window !== 'undefined' && MiniKit.isInstalled();
@@ -102,13 +102,6 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
                     'World App으로 연결'
                   )}
                 </button>
-
-                {/* Debug step display */}
-                {debugStep && (
-                  <p className="mt-3 text-center text-xs text-neon-cyan bg-neon-cyan/10 p-2 rounded border border-neon-cyan/20">
-                    [Debug] {debugStep}
-                  </p>
-                )}
 
                 {error && (
                   <p className="mt-3 text-center text-sm text-destructive">{error}</p>

@@ -4,7 +4,7 @@ import "./globals.css";
 import { MiniKitProvider } from "@/lib/minikit/provider";
 import { WagmiContextProvider } from "@/lib/wagmi/provider";
 import { AuthGuard } from "@/features/auth";
-import { Toaster } from "@/components/ui/sonner";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,7 +34,7 @@ export default function RootLayout({
         <MiniKitProvider>
           <WagmiContextProvider initialState={undefined}>
             <AuthGuard>{children}</AuthGuard>
-            <Toaster />
+
           </WagmiContextProvider>
         </MiniKitProvider>
       </body>
