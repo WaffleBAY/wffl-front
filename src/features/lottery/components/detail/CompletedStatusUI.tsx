@@ -38,7 +38,7 @@ function SellerChatSection({ sellerAddress }: { sellerAddress: string }) {
         disabled={isLoading || !username}
         onClick={() => {
           if (username) {
-            window.open(generateWorldChatLink(username), '_blank');
+            window.location.href = generateWorldChatLink(username);
           }
         }}
       >
@@ -71,7 +71,7 @@ function WinnerRow({ address, index, isMe, showChat }: { address: string; index:
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            window.open(generateWorldChatLink(username), '_blank');
+            window.location.href = generateWorldChatLink(username);
           }}
         >
           <MessageCircle className="w-3.5 h-3.5" />

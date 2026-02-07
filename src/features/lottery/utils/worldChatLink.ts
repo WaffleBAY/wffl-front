@@ -4,7 +4,7 @@
  */
 
 const WORLD_CHAT_APP_ID = 'app_e293fcd0565f45ca296aa317212d8741';
-const WORLD_APP_BASE_URL = 'https://world.org/mini-app';
+const WORLD_APP_BASE_URL = 'https://worldcoin.org/mini-app';
 
 /**
  * Generates a World Chat deep link URL

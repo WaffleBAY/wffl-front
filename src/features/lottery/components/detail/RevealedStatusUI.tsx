@@ -42,7 +42,7 @@ function WinnerRow({ address, index, isMe, showChat }: { address: string; index:
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            window.open(generateWorldChatLink(username), '_blank');
+            window.location.href = generateWorldChatLink(username);
           }}
         >
           <MessageCircle className="w-3.5 h-3.5" />
@@ -123,7 +123,7 @@ export function RevealedStatusUI({
               className="flex-1"
               onClick={() => {
                 if (sellerUsername) {
-                  window.open(generateWorldChatLink(sellerUsername), '_blank');
+                  window.location.href = generateWorldChatLink(sellerUsername);
                 }
               }}
               disabled={!sellerUsername}
