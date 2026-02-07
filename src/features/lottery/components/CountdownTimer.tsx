@@ -14,8 +14,8 @@ export function CountdownTimer({ endTime }: CountdownTimerProps) {
   const displayText = formatCountdown(days, hours, minutes, seconds, isExpired);
 
   return (
-    <div className="flex items-center gap-1 text-sm">
-      <Clock className="h-4 w-4 text-muted-foreground" />
+    <div className="flex items-center gap-1 text-xs">
+      <Clock className="h-3 w-3 text-muted-foreground" />
       <span className={isExpired ? 'text-muted-foreground' : 'text-orange-600 font-medium'}>
         {displayText}
       </span>

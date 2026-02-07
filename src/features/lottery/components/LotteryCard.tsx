@@ -46,16 +46,16 @@ export function LotteryCard({ lottery }: LotteryCardProps) {
           </div>
         </div>
 
-        <CardContent className="p-4 space-y-3">
-          <h3 className="font-semibold text-base line-clamp-2">
+        <CardContent className="px-3 py-2 space-y-1">
+          <h3 className="font-semibold text-sm line-clamp-2">
             {lottery.title}
           </h3>
-
-          <p className="text-sm text-muted-foreground">
-            응모가격: <span className="font-medium text-foreground">{formatWLD(lottery.ticketPrice)} WLD</span>
-          </p>
-
-          <CountdownTimer endTime={lottery.endTime} />
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              응모가격: <span className="font-medium text-foreground">{formatWLD(lottery.ticketPrice)} WLD</span>
+            </p>
+            <CountdownTimer endTime={lottery.endTime} />
+          </div>
         </CardContent>
       </Card>
     </Link>
