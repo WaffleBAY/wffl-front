@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "World Lottery",
+  title: "World Raffle",
   description: "WorldID 인증 기반 실물 경품 복권 마켓플레이스",
 };
 

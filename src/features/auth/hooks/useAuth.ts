@@ -45,7 +45,7 @@ export function useAuth(): UseAuthReturn {
       const result = await MiniKit.commandsAsync.walletAuth({
         nonce,
         expirationTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-        statement: 'Sign in to World Lottery',
+        statement: 'Sign in to World Raffle',
       });
 
       setDebugStep(`응답: ${result.finalPayload.status}`);

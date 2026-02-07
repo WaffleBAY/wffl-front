@@ -50,7 +50,7 @@ export function LoginBottomSheet({ isOpen }: LoginBottomSheetProps) {
         <Sheet.Content>
           <div className="flex flex-col items-center px-6 pb-8">
             {/* App Logo/Title */}
-            <h1 className="mb-2 text-2xl font-bold text-gray-900">World Lottery</h1>
+            <h1 className="mb-2 text-2xl font-bold text-gray-900">World Raffle</h1>
             <p className="mb-8 text-center text-sm text-gray-500">
               실물 경품 복권 마켓플레이스
             </p>
