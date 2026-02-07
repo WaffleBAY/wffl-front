@@ -14,9 +14,7 @@ import { CHAIN_ID, PARTICIPANT_DEPOSIT, WLD_TOKEN_ADDRESS, getWaffleFactoryAddre
 import { waffleFactoryAbi } from '@/contracts/generated'
 import {
   useWriteWaffleMarketSettle,
-  useWriteWaffleMarketClaimRefund,
   useSimulateWaffleMarketSettle,
-  useSimulateWaffleMarketClaimRefund,
   useWriteWaffleMarketOpenMarket,
   useSimulateWaffleMarketOpenMarket,
 } from '@/contracts/generated'
@@ -117,68 +115,140 @@ export function useSettle(marketAddress: Address | undefined) {
  */
 export function useClaimRefund(marketAddress: Address | undefined) {
   const [step, setStep] = useState<SettlementStep>('idle')
+  const [hash, setHash] = useState<`0x${string}` | undefined>()
+  const [error, setError] = useState<string | null>(null)
 
-  // Simulate first to catch errors before spending gas
-  const { data: simulateData, error: simulateError } = useSimulateWaffleMarketClaimRefund({
-    address: marketAddress,
-    chainId: CHAIN_ID,
-    query: { enabled: !!marketAddress },
-  })
-
-  // Write contract
-  const {
-    data: hash,
-    error: writeError,
-    isPending,
-    writeContract,
-    reset: resetWrite,
-  } = useWriteWaffleMarketClaimRefund()
-
-  // Wait for confirmation
-  const {
-    isLoading: isConfirming,
-    isSuccess: isConfirmed,
-    error: receiptError,
-  } = useWaitForTransactionReceipt({ hash })
-
-  // Update step based on transaction state
-  useEffect(() => {
-    if (writeError || receiptError) {
+  const claimRefund = useCallback(async () => {
+    if (!marketAddress) {
+      setError('컨트랙트 주소가 없습니다')
       setStep('error')
-    } else if (isConfirmed) {
-      setStep('success')
-    } else if (hash && isConfirming) {
-      setStep('confirming')
-    } else if (isPending) {
-      setStep('signing')
+      return
     }
-  }, [isPending, hash, isConfirming, isConfirmed, writeError, receiptError])
 
-  const claimRefund = useCallback(() => {
-    if (simulateData?.request) {
-      setStep('signing')
-      writeContract(simulateData.request)
+    setStep('signing')
+    setError(null)
+
+    try {
+      if (!MiniKit.isInstalled()) {
+        throw new Error('World App에서 열어주세요')
+      }
+
+      const factoryAddress = getWaffleFactoryAddress(CHAIN_ID)
+
+      // Pre-flight simulation
+      console.log('[Refund] Pre-flight simulation...', { factoryAddress, marketAddress })
+      try {
+        const publicClient = createPublicClient({ chain: worldChain, transport: http() })
+        await publicClient.simulateContract({
+          address: factoryAddress,
+          abi: waffleFactoryAbi,
+          functionName: 'claimRefund',
+          args: [marketAddress],
+        })
+        console.log('[Refund] Simulation passed')
+      } catch (simError: unknown) {
+        const reason = simError instanceof Error ? simError.message : String(simError)
+        console.error('[Refund] Simulation failed:', reason)
+        if (reason.includes('Unauthorized')) {
+          throw new Error('환불 권한이 없습니다. 이미 환불되었거나 참여하지 않은 마켓입니다.')
+        }
+        if (reason.includes('InsufficientFunds')) {
+          throw new Error('환불 가능한 금액이 없습니다.')
+        }
+        throw new Error(`컨트랙트 호출 실패: ${reason.slice(0, 300)}`)
+      }
+
+      console.log('[Refund] Sending MiniKit transaction...')
+      let result
+      try {
+        result = await MiniKit.commandsAsync.sendTransaction({
+          transaction: [
+            {
+              address: factoryAddress,
+              abi: waffleFactoryAbi as readonly object[],
+              functionName: 'claimRefund',
+              args: [marketAddress],
+            },
+          ],
+        })
+      } catch (txError) {
+        const msg = txError instanceof Error
+          ? txError.message
+          : typeof txError === 'object'
+            ? JSON.stringify(txError, null, 0)
+            : String(txError)
+        throw new Error(`MiniKit 에러: ${msg.slice(0, 300)}`)
+      }
+
+      const { finalPayload: txPayload } = result
+      console.log('[Refund] MiniKit response:', JSON.stringify(txPayload).slice(0, 300))
+
+      if (txPayload.status === 'error') {
+        const errorCode = (txPayload as { error_code?: string }).error_code
+        const errorDetail = errorCode === 'user_rejected'
+          ? '사용자가 거부했습니다'
+          : `TX 에러: ${JSON.stringify(txPayload).slice(0, 200)}`
+        throw new Error(errorDetail)
+      }
+
+      // Poll for confirmation
+      setStep('confirming')
+
+      const transactionId = (txPayload as { transaction_id: string }).transaction_id
+      const appId = process.env.NEXT_PUBLIC_APP_ID
+      console.log('[Refund] Polling for tx hash, transactionId:', transactionId)
+
+      let realHash: string | null = null
+      for (let i = 0; i < 30; i++) {
+        try {
+          const url = `https://developer.worldcoin.org/api/v2/minikit/transaction/${transactionId}?app_id=${appId}&type=transaction`
+          const res = await fetch(url)
+          if (res.ok) {
+            const data = await res.json()
+            console.log(`[Refund] Poll ${i}:`, data.transactionStatus, data.transactionHash?.slice(0, 10))
+            if (data.transactionStatus === 'failed') {
+              throw new Error(`트랜잭션 실패 (relayer): ${JSON.stringify(data).slice(0, 200)}`)
+            }
+            if (data.transactionHash) {
+              realHash = data.transactionHash
+              break
+            }
+          }
+        } catch (e) {
+          if (e instanceof Error && e.message.startsWith('트랜잭션 실패')) throw e
+        }
+        await new Promise(r => setTimeout(r, 2000))
+      }
+
+      if (!realHash) {
+        throw new Error('트랜잭션 해시를 가져오지 못했습니다 (timeout)')
+      }
+
+      console.log('[Refund] Success! txHash:', realHash)
+      setHash(realHash as `0x${string}`)
+      setStep('success')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : '환불에 실패했습니다'
+      console.error('[Refund] Error:', message, err)
+      setError(message)
+      setStep('error')
     }
-  }, [simulateData?.request, writeContract])
+  }, [marketAddress])
 
   const reset = useCallback(() => {
-    resetWrite()
     setStep('idle')
-  }, [resetWrite])
-
-  // Combine all error sources
-  const error = simulateError || writeError || receiptError
+    setHash(undefined)
+    setError(null)
+  }, [])
 
   return {
     claimRefund,
     reset,
     step,
-    isPending,
-    isConfirming,
-    isConfirmed,
     hash,
-    error: error ? (error as BaseError).shortMessage || error.message : null,
-    canClaim: !!simulateData?.request,
+    error,
+    isConfirmed: step === 'success',
+    canClaim: !!marketAddress,
   }
 }
 
