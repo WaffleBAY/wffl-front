@@ -6,7 +6,7 @@ import { useAuthStore } from '@/features/auth/store/useAuthStore';
 import { abbreviateAddress } from '@/features/auth/utils/address';
 import { MarketType } from '../../types';
 import { Button } from '@/components/ui/button';
-import { useClaimRefund } from '../../hooks/useContractWrite';
+import type { SettlementStep } from '../../hooks/useContractWrite';
 import type { Address } from 'viem';
 import { useParticipantInfo } from '../../hooks/useContractRead';
 
@@ -17,9 +17,11 @@ interface CompletedStatusUIProps {
     winners?: readonly string[];
     status?: number;
   };
+  onClaimRefund?: () => void;
+  claimRefundStep?: SettlementStep;
 }
 
-export function CompletedStatusUI({ lottery, contractData }: CompletedStatusUIProps) {
+export function CompletedStatusUI({ lottery, contractData, onClaimRefund, claimRefundStep }: CompletedStatusUIProps) {
   const { walletAddress, isWalletConnected } = useAuthStore();
 
   // Use on-chain winners if available, fallback to lottery.winners
@@ -39,16 +41,11 @@ export function CompletedStatusUI({ lottery, contractData }: CompletedStatusUIPr
     ? participants.some((p) => p.toLowerCase() === walletAddress.toLowerCase())
     : false;
 
-  // Refund hook for deposit
+  // Check on-chain participation and refund status
   const { hasEntered: onChainEntered, depositRefunded } = useParticipantInfo(
     lottery.contractAddress as Address | undefined,
     walletAddress as Address | undefined
   );
-
-  const {
-    claimRefund,
-    step: claimRefundStep,
-  } = useClaimRefund(lottery.contractAddress as Address | undefined);
 
   const isClaimProcessing = claimRefundStep === 'signing' || claimRefundStep === 'confirming';
   const canClaimRefund = (hasEntered || onChainEntered) && !depositRefunded;
@@ -135,7 +132,7 @@ export function CompletedStatusUI({ lottery, contractData }: CompletedStatusUIPr
           </p>
           <Button
             className="w-full bg-blue-600 hover:bg-blue-700"
-            onClick={() => claimRefund()}
+            onClick={onClaimRefund}
             disabled={isClaimProcessing || claimRefundStep === 'success'}
           >
             {isClaimProcessing ? '처리 중...' : claimRefundStep === 'success' ? '환불 완료!' : '보증금 환불'}

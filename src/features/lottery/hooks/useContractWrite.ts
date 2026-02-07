@@ -135,30 +135,11 @@ export function useClaimRefund(marketAddress: Address | undefined) {
 
       const factoryAddress = getWaffleFactoryAddress(CHAIN_ID)
 
-      // Pre-flight simulation
-      console.log('[Refund] Pre-flight simulation...', { factoryAddress, marketAddress })
-      try {
-        const publicClient = createPublicClient({ chain: worldChain, transport: http() })
-        await publicClient.simulateContract({
-          address: factoryAddress,
-          abi: waffleFactoryAbi,
-          functionName: 'claimRefund',
-          args: [marketAddress],
-        })
-        console.log('[Refund] Simulation passed')
-      } catch (simError: unknown) {
-        const reason = simError instanceof Error ? simError.message : String(simError)
-        console.error('[Refund] Simulation failed:', reason)
-        if (reason.includes('Unauthorized')) {
-          throw new Error('환불 권한이 없습니다. 이미 환불되었거나 참여하지 않은 마켓입니다.')
-        }
-        if (reason.includes('InsufficientFunds')) {
-          throw new Error('환불 가능한 금액이 없습니다.')
-        }
-        throw new Error(`컨트랙트 호출 실패: ${reason.slice(0, 300)}`)
-      }
+      // Skip pre-flight simulation: claimRefund checks msg.sender (participant),
+      // but simulateContract without account uses address(0) → always fails.
+      // MiniKit relayer handles the actual tx with the correct sender.
 
-      console.log('[Refund] Sending MiniKit transaction...')
+      console.log('[Refund] Sending MiniKit transaction...', { factoryAddress, marketAddress })
       let result
       try {
         result = await MiniKit.commandsAsync.sendTransaction({

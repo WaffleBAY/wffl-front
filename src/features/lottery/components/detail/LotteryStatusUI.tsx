@@ -69,7 +69,7 @@ export function LotteryStatusUI({
           />
         );
       case LotteryStatus.COMPLETED:
-        return <CompletedStatusUI lottery={lottery} contractData={contractData} />;
+        return <CompletedStatusUI lottery={lottery} contractData={contractData} onClaimRefund={onClaimRefund} claimRefundStep={claimRefundStep} />;
       case LotteryStatus.FAILED:
         return <FailedStatusUI lottery={lottery} onClaimRefund={onClaimRefund} claimRefundStep={claimRefundStep} />;
       default:
